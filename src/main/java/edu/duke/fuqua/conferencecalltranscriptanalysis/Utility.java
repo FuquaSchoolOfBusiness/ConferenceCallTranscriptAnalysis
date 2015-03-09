@@ -1,6 +1,9 @@
+package edu.duke.fuqua.conferencecalltranscriptanalysis;
+
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 
@@ -93,7 +96,7 @@ public class Utility {
 		return words;
 	}
 	
-	public static boolean isExcludedWord(String word, ArrayList<String> pertinentExcludedWords) {
+	public static boolean isExcludedWord(String word, List<String> pertinentExcludedWords) {
 		for (String EWord : pertinentExcludedWords) {
 			if (word.startsWith(EWord.toLowerCase())) {
 				return true;
@@ -137,4 +140,10 @@ public class Utility {
 		str = str.replaceAll("[^a-zA-Z]+$", "");
 		return str;
 	}
+    
+    public static Boolean isPhrase(String s) {
+        return s.contains(" ");
+        // This is how it tested originally.. seems expensive to me.
+        //return s.split(" ").length > 1;
+    }
 }

@@ -1,3 +1,5 @@
+package edu.duke.fuqua.conferencecalltranscriptanalysis;
+
 /**
  * 
  * @author Geoff Huang
@@ -14,6 +16,8 @@ import java.io.FileReader;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Dictionary {
 	
@@ -93,4 +97,5 @@ public class Dictionary {
 	{
 		System.out.println(myWords.size());
 	}
+    
 }

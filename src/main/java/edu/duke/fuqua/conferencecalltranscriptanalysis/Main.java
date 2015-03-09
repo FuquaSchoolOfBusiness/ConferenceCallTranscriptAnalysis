@@ -1,3 +1,5 @@
+package edu.duke.fuqua.conferencecalltranscriptanalysis;
+
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.FlowLayout;
@@ -6,8 +8,18 @@ import java.awt.LayoutManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+import java.util.prefs.Preferences;
 import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -26,7 +38,7 @@ public class Main extends JPanel implements ActionListener {
 	private static final long serialVersionUID = 1L;
 	private static final String newline = "\n";
 	private static final int allottedLength = 30;
-	
+
 	private static JFrame frame;
     JButton openButton;
     JButton saveButton;
@@ -76,10 +88,26 @@ public class Main extends JPanel implements ActionListener {
     JButton runButton;
     JButton runButton2;
     JButton runAllButton;
+   
+  private static Logger logger;
+  static {
+    InputStream inputStream = Main.class.getResourceAsStream("/logging.properties");
+    if (null != inputStream) {
+        try {
+            LogManager.getLogManager().readConfiguration(inputStream);
+        } catch (IOException e) {
+            Logger.getGlobal().log(Level.SEVERE, "init logging system", e);
+            e.printStackTrace();
+        }
+    }
     
+  }
+  private static String ourNodeName = "/edu/duke/fuqua/conferencecall";
+  public static Preferences prefs;
+  
     public Main() {
         super(new BorderLayout());
-
+        
 //        filename = "C:\\Moorman\\Knowledge Program\\Sample Text Files";
 //        directoryName = "C:\\Moorman\\Knowledge Program";
 //        saveName = "";
@@ -403,10 +431,18 @@ public class Main extends JPanel implements ActionListener {
         	if (ready == true) {
         		textArea.append(newline + "Program running...");
         		if (e.getSource() == runButton) {
-        			CounterMain counter = new CounterMain(filename, saveName,
-        					knowledgeFileName, knowledgeExcludeFileName, marketingFileName, marketingExcludeFileName, 
+        			CounterMain counter = new CounterMain(
+                            filename, 
+                            saveName,
+        					knowledgeFileName, 
+                            knowledgeExcludeFileName,
+                            marketingFileName, 
+                            marketingExcludeFileName, 
         					//addedDictFileName, addedDictExcludeFileName, companiesFileName, namesFileName, 
-        					companiesFileName, namesFileName, loggingEnabled, includeOnlyDataLines);
+        					companiesFileName, 
+                            namesFileName, 
+                            loggingEnabled, 
+                            includeOnlyDataLines);
             		
         			try {
         				counter.callCounter();
@@ -469,11 +505,13 @@ public class Main extends JPanel implements ActionListener {
         //Display the window.
         frame.pack();
         frame.setVisible(true);
-    }
+    }    
+    
+    public static void main(String[] args) throws IOException {               
+        logger = Logger.getLogger(Main.class.getCanonicalName());
+        logger.info("Starting application."); 
+        prefs = Preferences.userRoot().node(ourNodeName);
 
-    public static void main(String[] args) {
-        //Schedule a job for the event dispatch thread:
-        //creating and showing this application's GUI.
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 //Turn off metal's use of bold fonts
