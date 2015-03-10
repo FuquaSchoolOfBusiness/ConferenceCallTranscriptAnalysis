@@ -223,7 +223,7 @@ public class Logic {
         Lexicon lexicon = new Lexicon();
         if (file.getName().endsWith("txt")) {		
             String filename = file.getPath();
-            //logger.fine("FindNames parsing file " + filename
+            Logger.getGlobal().finest("Parsing dictionary file " + file.getName());
 			FileReader dictionary = new FileReader(filename);
             BufferedReader into = new BufferedReader(dictionary);
 			while (into.ready()) {
@@ -244,6 +244,7 @@ public class Logic {
 			}
 			into.close();
         }
+        Logger.getGlobal().finest("Dictionary has " + lexicon.size() + " terms.");
         return lexicon;
     }
     private void addItemToDictionary(Lexicon lexicon, String word, String category) {
@@ -301,11 +302,16 @@ public class Logic {
     
     
     public void testLexiconPre() throws IOException {
+        
+        //File sample = new File("/Users/conder/VERTEX PHARMACEUTICALS 2008 Q2.txt");
+        File sample = new File("/Users/conder/VERTEX PHARMACEUTICALS 2009 Q3.txt");
+        
+        //Lexicon lex = this.parseDictionaryFromFile(new File("/Users/conder/Marketing Dictionary.txt"));
+        
         Lexicon lex = this.parseDictionaryFromFile(new File("/Users/conder/Knowledge Dictionary.txt"));
         lex.exclusions = this.loadExclusionWords("/Users/conder/Excluded Words.txt");
         
-        //Lexicon lex = this.parseDictionaryFromFile(new File("/Users/conder/Marketing Dictionary.txt"));
-        File sample = new File("/Users/conder/VERTEX PHARMACEUTICALS 2008 Q2.txt");
+       
         
         FileReader reader = new FileReader(sample);
         BufferedReader readerx = new BufferedReader(reader);
@@ -322,13 +328,13 @@ public class Logic {
         }
         
         readerx.close();
-        System.out.println("1: " + String.valueOf(lex.preCountCategoryWords.get("First")));
-        System.out.println("2: " + String.valueOf(lex.preCountCategoryWords.get("Second")));
-        System.out.println("3: " + String.valueOf(lex.preCountCategoryWords.get("Third")));
-        System.out.println("4: " + String.valueOf(lex.preCountCategoryWords.get("Fourth")));
-        System.out.println("5: " + String.valueOf(lex.preCountCategoryWords.get("Fifth")));
-        System.out.println("6: " + String.valueOf(lex.preCountCategoryWords.get("Sixth")));
-        System.out.println("7: " + String.valueOf(lex.preCountCategoryWords.get("Seventh")));
+        System.out.println("1: " + String.valueOf(lex.preCountCategoryWords.get("Stock")));
+        System.out.println("2: " + String.valueOf(lex.preCountCategoryWords.get("Search")));
+        System.out.println("3: " + String.valueOf(lex.preCountCategoryWords.get("Acquisition")));
+        System.out.println("4: " + String.valueOf(lex.preCountCategoryWords.get("Process")));
+        System.out.println("5: " + String.valueOf(lex.preCountCategoryWords.get("Storage")));
+        System.out.println("6: " + String.valueOf(lex.preCountCategoryWords.get("Transfer")));
+        System.out.println("7: " + String.valueOf(lex.preCountCategoryWords.get("Application")));
         System.out.println(lex.size());
         System.out.println(lex.preCountAllWords);
         System.out.println(lex.countAllWords);
@@ -343,6 +349,7 @@ public class Logic {
             if (line.trim().length() > 0 && !list.contains(line.trim()))
                 list.add(line.trim());
         }
+        Logger.getGlobal().finest("Loaded exclusion " + list.size() + " words.");
         return list;
     }
     

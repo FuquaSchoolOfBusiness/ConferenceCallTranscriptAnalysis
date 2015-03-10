@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * A Lexicon is a list of words each with zero or more categories.
@@ -84,20 +85,25 @@ public class Lexicon extends HashMap {
     Map<String, Integer> postCountCategoryAnalystWords =    // Count of all dictionary words in a particular category for analysts
             new HashMap<>(); 
     
-    public void incrementCountCategories(String key, Map<String, Integer> map) {
+    public void incrementCountCategories(String word, String key, List<String> processed_categories, Map<String, Integer> map) {
         List<String> cats = (List)this.get(key);
         Iterator<String> iterator = cats.iterator();
         while (iterator.hasNext()) {
             String category = iterator.next();
-System.out.println("," + category + "," + key);
-            if (map.containsKey(category)) {
-                Integer cc = map.get(category);
-                cc++;
-                map.put(category, cc);
+            if (!processed_categories.contains(category)) {
+                Logger.getGlobal().fine("," + word + "," + category + "," + key);
+                if (map.containsKey(category)) {
+                    Integer cc = map.get(category);
+                    cc++;
+                    map.put(category, cc);
+                } else {
+                    // No counter for category
+                    Integer cc = 1;
+                    map.put(category, cc);
+                }
+                processed_categories.add(category);
             } else {
-                // No counter for category
-                Integer cc = 1;
-                map.put(category, cc);
+                Logger.getGlobal().fine(",ALREADY MATCHED " + word + "," + category + "," + key);
             }
         }
     }
@@ -115,69 +121,67 @@ System.out.println("," + category + "," + key);
     
     public void countWords(String line, int type) {
                 
-        int iteration = 0;
+        // Handle phrases differently than words
         Iterator<String> keys = this.keySet().iterator();
         while (keys.hasNext()) {
             String key = keys.next();
-            iteration++;
-            // Handle phrases differently than words
+            String nLine = line;
             if (Utility.isPhrase(key)) {
-                
                 int index = 0;
 				while (index >= 0) {
-					index = line.indexOf(key);
+					index = nLine.indexOf(key);
 					if (index >= 0) {
                         // In original code, phrases do not appear to increment
                         // overall pre word count.. should VERIFY
                         if (type == TYPE_PRE) {
-                            incrementCountCategories(key, preCountCategoryWords);
+                            incrementCountCategories(nLine, key, new ArrayList<>(), preCountCategoryWords);
                         } else if (type == TYPE_POST_ANALYST) {
-                            incrementCountCategories(key, postCountCategoryAnalystWords);
+                            incrementCountCategories(nLine, key, new ArrayList<>(), postCountCategoryAnalystWords);
                         } else if (type == TYPE_POST_COMPANY) {
-                            incrementCountCategories(key, postCountCategoryCompanyWords);
+                            incrementCountCategories(nLine, key, new ArrayList<>(), postCountCategoryCompanyWords);
                         }
-						line = line.substring(index + key.length());
+						nLine = nLine.substring(index + key.length());
 					}
 				}                
             
             } 
-            else // Handle as special array of words
-            {
-
-                String[] wordsInLine = Utility.splitAndMaskWordsAroundNot(line);
-
-		        for (int j = 0; j < wordsInLine.length; j++) {
-					String word = wordsInLine[j].toLowerCase();
-                    if (iteration < 2) { 
-                        countAllWords++;
-                        if (type == TYPE_PRE) {
-                            preCountAllWords++;
-                        } else if (type == TYPE_POST_ANALYST) {
-                            postCountAllAnalystWords++;
-                        } else if (type == TYPE_POST_COMPANY) {
-                            postCountAllCompanyWords++;
-                        }
-                    }     
+        }
+        
+        String[] wordsInLine = Utility.splitAndMaskWordsAroundNot(line);
+        for (int j = 0; j < wordsInLine.length; j++) {
+            boolean processed = false;
+            List<String> processed_categories = new ArrayList<>();
+            countAllWords++;
+            String word = wordsInLine[j].toLowerCase();
+            if (type == TYPE_PRE) {
+                preCountAllWords++;
+            } else if (type == TYPE_POST_ANALYST) {
+                postCountAllAnalystWords++;
+            } else if (type == TYPE_POST_COMPANY) {
+                postCountAllCompanyWords++;
+            }            
                     
-                    if (word.startsWith(key.toLowerCase()) && 
+            Iterator<String> keys2 = this.keySet().iterator();
+            while (keys2.hasNext()) {
+                String key = keys2.next(); 
+                if (word.startsWith(key.toLowerCase()) && 
                             !Utility.isExcludedWord(word, exclusions)) {
                         
                         if (type == TYPE_PRE) {
-                            preCountAllDictionaryWords++;
-System.out.print(word);
-                            incrementCountCategories(key, preCountCategoryWords);
+                            if (!processed) {
+                                preCountAllDictionaryWords++;
+                                processed = true;
+                            }
+                            incrementCountCategories(word, key, processed_categories, preCountCategoryWords);
                         } else if (type == TYPE_POST_ANALYST) {
-                            incrementCountCategories(key, postCountCategoryAnalystWords);
+                            incrementCountCategories(word, key, processed_categories, postCountCategoryAnalystWords);
                         } else if (type == TYPE_POST_COMPANY) {
-                            incrementCountCategories(key, postCountCategoryCompanyWords);
+                            incrementCountCategories(word, key, processed_categories, postCountCategoryCompanyWords);
                         }
                           
-                    }
-                                        
-				}
-                
+                }    
             }
-        }
+        }        
         
     }
     /**
