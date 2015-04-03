@@ -7,11 +7,15 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
@@ -44,6 +48,19 @@ public class Logic {
   PrintWriter namesOutput;
   PrintWriter companiesOutput;
     
+/**
+ * AUDIT FILES
+ * Generate one audit file per company.
+ * Audit file will be structured as:
+ * 2009 Q3 (VERTEX PHARMACEUTICALS 2009 Q3.txt)
+ * 21: PRE, word, matched term, category
+ * 54: POST-COMPANY, word, matches, term, category
+ * 55: POST-ANALYST, word, matches, term, category
+ * CATEGORY: 3, CATEGORY: 5, CATEGORY: N
+ * 
+ */  
+  
+  
 /**
  * Parse company name from file (name of file).
  * @param file
@@ -221,6 +238,7 @@ public class Logic {
  */    
     public Lexicon parseDictionaryFromFile(File file) throws FileNotFoundException, IOException {
         Lexicon lexicon = new Lexicon();
+        int linenum = 0;
         if (file.getName().endsWith("txt")) {		
             String filename = file.getPath();
             Logger.getGlobal().finest("Parsing dictionary file " + file.getName());
@@ -232,10 +250,10 @@ public class Logic {
                     String[] linesplit = line.split(",");
                     if (linesplit.length > 1) {
                         if (linesplit[0].trim().length() > 0)
-                            addItemToDictionary(lexicon,linesplit[0].trim(),linesplit[1].trim());
+                            addItemToDictionary(lexicon,linesplit[0].trim(),linesplit[1].trim(),++linenum);
                     } else {
                         if (linesplit[0].trim().length() > 0)
-                            addItemToDictionary(lexicon,linesplit[0].trim(),"NONE");
+                            addItemToDictionary(lexicon,linesplit[0].trim(),"NONE",++linenum);
                     }
                 } catch (Throwable _t) {
                     Logger.getGlobal().log(
@@ -247,15 +265,13 @@ public class Logic {
         Logger.getGlobal().finest("Dictionary has " + lexicon.size() + " terms.");
         return lexicon;
     }
-    private void addItemToDictionary(Lexicon lexicon, String word, String category) {
-        if (lexicon.containsKey(word)) {
-            List list = (List)lexicon.get(word);
-            if (!list.contains(category))
-                list.add(category);
-        } else {
-            List categories = new ArrayList<>();
-            categories.add(category);
-            lexicon.put(word,categories);
+    private void addItemToDictionary(Lexicon lexicon, String word, String category, Integer order) {
+        if (!lexicon.contains(word)) {
+            Term term = new Term();
+            term.setCategory(category);
+            term.setTerm(word);
+            term.setOrder(order);
+            lexicon.add(term);
         }
     }
     
@@ -303,31 +319,174 @@ public class Logic {
     
     public void testLexiconPre() throws IOException {
         
-        //File sample = new File("/Users/conder/VERTEX PHARMACEUTICALS 2008 Q2.txt");
-        File sample = new File("/Users/conder/VERTEX PHARMACEUTICALS 2009 Q3.txt");
+        FileWriter audit = new FileWriter("/Users/conder/audit.txt");
+        
+        
+        File sample = new File("/Users/conder/VERTEX PHARMACEUTICALS 2008 Q2.txt");
+        //File sample = new File("/Users/conder/VERTEX PHARMACEUTICALS 2009 Q3.txt");
         
         //Lexicon lex = this.parseDictionaryFromFile(new File("/Users/conder/Marketing Dictionary.txt"));
         
-        Lexicon lex = this.parseDictionaryFromFile(new File("/Users/conder/Knowledge Dictionary.txt"));
+        //Lexicon lex = this.parseDictionaryFromFile(
+        //        new File("/Users/conder/Knowledge Dictionary copy.txt"));
+        Lexicon lex = this.parseDictionaryFromFile(
+                new File("/Users/conder/Knowledge Dictionary.txt"));
         lex.exclusions = this.loadExclusionWords("/Users/conder/Excluded Words.txt");
-        
-       
+        lex.audit = audit;       
         
         FileReader reader = new FileReader(sample);
         BufferedReader readerx = new BufferedReader(reader);
 		
+        Boolean pre_mode = true;
+        
+        LinkedList<Name> lines = new LinkedList<>();
+        ArrayList<String> analysts = new ArrayList<>();
+        ArrayList<String> companyReps = new ArrayList<>();
+        
+        int line_number = 0;
+        int classify = 3;
+        
         while (readerx.ready()) {
 			String line = readerx.readLine();
-            
+            line_number++;
             if (line.contains("QUESTION AND ANSWER")) {
-				break;
+                pre_mode = false;
+			} else if (pre_mode) {
+                lex.countWords(line, Lexicon.TYPE_PRE, line_number);
 			} else {
-                lex.countWords(line, Lexicon.TYPE_PRE);
-			}
-            
+                String name = "";
+                String title = "";
+                
+                if (line.contains(":")) {
+                    String[] pieces = line.split(":");
+                    name = pieces[0];
+                    if (name.contains(",")) {
+                        //Split on comma to remove the name's titles
+                        String[] parts = name.split(",");
+                        name = parts[0].trim();
+                        if (parts.length > 1) title = parts[1].trim();
+                    }
+                    if (name.startsWith("OPERATOR")) {
+                        Name nameObj = Name.generateName(
+                                line_number, 
+                                Name.TYPE_OPERATOR, 
+                                pieces.length > 1 ? pieces[1].trim(): "", 
+                                name);
+                        lines.add(nameObj);
+                        classify = 0; // operator
+                    }
+                    else if (name.toUpperCase().startsWith("[COPYRIGHT")) {
+                        classify = 3; // do nothing
+                    }
+                    else if (name.equals("")) {
+                        if (classify == 0) {
+                            Name nameObj = Name.generateName(
+                                line_number, 
+                                Name.TYPE_OPERATOR, 
+                                pieces.length > 1 ? pieces[1].trim(): "", 
+                                name);
+                            lines.add(nameObj);
+                        } else if (classify == 1) {
+                            Name nameObj = Name.generateName(
+                                line_number, 
+                                Name.TYPE_COMPANY_REP, 
+                                pieces.length > 1 ? pieces[1].trim(): "", 
+                                name);
+                            lines.add(nameObj);
+                        } else if (classify == 2) {
+                            Name nameObj = Name.generateName(
+                                line_number, 
+                                Name.TYPE_ANALYST, 
+                                pieces.length > 1 ? pieces[1].trim(): "", 
+                                name);
+                            lines.add(nameObj);
+                        }
+                    }
+                    else if (analysts.contains(name) || name.contains("ANALYST") || title.contains("ANALYST")) {
+                            Name nameObj = Name.generateName(
+                                line_number, 
+                                Name.TYPE_ANALYST, 
+                                pieces.length > 1 ? pieces[1].trim(): "", 
+                                name);
+                            lines.add(nameObj);
+                            classify = 2;
+                            if (!analysts.contains(name)) analysts.add(name);
+                            System.out.println("classified as analyst - case 6");
+                    }
+                    else if (companyReps.contains(name)) { //|| arrayContains(myNames.get(i), name)) {
+                            Name nameObj = Name.generateName(
+                                line_number, 
+                                Name.TYPE_COMPANY_REP, 
+                                pieces.length > 1 ? pieces[1].trim(): "", 
+                                name);
+                            lines.add(nameObj);
+                            if (!companyReps.contains(name)) companyReps.add(name);
+                            classify = 1;
+                            System.out.println("classified as company rep - case 7");
+                    }
+                        // The operator introduces analysts
+                    else if (classify == 0) {
+                            Name nameObj = Name.generateName(
+                                line_number, 
+                                Name.TYPE_ANALYST, 
+                                pieces.length > 1 ? pieces[1].trim(): "", 
+                                name);
+                            lines.add(nameObj);
+                            classify = 2;
+                            if (!analysts.contains(name)) analysts.add(name);
+                            System.out.println("classified as analyst - case 8");
+                    }
+                        // If name is listed in company representative array add to
+                        // company statements
+                    else {
+                            Name nameObj = Name.generateName(
+                                line_number, 
+                                Name.TYPE_COMPANY_REP, 
+                                pieces.length > 1 ? pieces[1].trim(): "", 
+                                name);
+                            lines.add(nameObj);
+                            if (!companyReps.contains(name)) companyReps.add(name);
+                            classify = 1;
+                            System.out.println("classified as company rep - case 10");
+                    }
+                        
+                    
+                } else {
+                        if (classify == 0) {
+                            Name nameObj = Name.generateName(
+                                line_number, 
+                                Name.TYPE_OPERATOR, 
+                                line.trim(), 
+                                name);
+                            lines.add(nameObj);
+                        } else if (classify == 1) {
+                            Name nameObj = Name.generateName(
+                                line_number, 
+                                Name.TYPE_COMPANY_REP, 
+                                line.trim(), 
+                                name);
+                            lines.add(nameObj);
+                        } else if (classify == 2) {
+                            Name nameObj = Name.generateName(
+                                line_number, 
+                                Name.TYPE_ANALYST, 
+                                line.trim(), 
+                                name);
+                            lines.add(nameObj);
+                        }                    
+                }
+            }
+        }
+        
+        for (Name name: lines) {
+            if (name.getType() == Name.TYPE_COMPANY_REP) 
+                lex.countWords(name.getLine(), Lexicon.TYPE_POST_COMPANY, name.getNumber());
+            else if (name.getType() == Name.TYPE_ANALYST)
+                lex.countWords(name.getLine(), Lexicon.TYPE_POST_ANALYST, name.getNumber());
         }
         
         readerx.close();
+        audit.close();
         System.out.println("1: " + String.valueOf(lex.preCountCategoryWords.get("Stock")));
         System.out.println("2: " + String.valueOf(lex.preCountCategoryWords.get("Search")));
         System.out.println("3: " + String.valueOf(lex.preCountCategoryWords.get("Acquisition")));
@@ -335,10 +494,31 @@ public class Logic {
         System.out.println("5: " + String.valueOf(lex.preCountCategoryWords.get("Storage")));
         System.out.println("6: " + String.valueOf(lex.preCountCategoryWords.get("Transfer")));
         System.out.println("7: " + String.valueOf(lex.preCountCategoryWords.get("Application")));
-        System.out.println(lex.size());
-        System.out.println(lex.preCountAllWords);
-        System.out.println(lex.countAllWords);
-        System.out.println(lex.preCountAllDictionaryWords);
+        System.out.println("1: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Stock")));
+        System.out.println("2: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Search")));
+        System.out.println("3: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Acquisition")));
+        System.out.println("4: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Process")));
+        System.out.println("5: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Storage")));
+        System.out.println("6: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Transfer")));
+        System.out.println("7: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Application")));
+        System.out.println("1: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Stock")));
+        System.out.println("2: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Search")));
+        System.out.println("3: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Acquisition")));
+        System.out.println("4: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Process")));
+        System.out.println("5: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Storage")));
+        System.out.println("6: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Transfer")));
+        System.out.println("7: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Application")));
+        System.out.println("size: " + lex.size());
+        System.out.println("precountall:" + lex.preCountAllWords);
+        System.out.println("allwords:" + lex.countAllWords);
+        System.out.println("prealldictionary: " + lex.preCountAllDictionaryWords);
+        
+        System.out.println("postcountallan: " + lex.postCountAllAnalystWords);
+        System.out.println("postcountallco: " + lex.postCountAllCompanyWords);
+        
+        
+        System.out.println("ANALYSTS: " + analysts.toString());
+        System.out.println("REPS:" + companyReps.toString());
     }
     
     public List<String> loadExclusionWords(String path) throws FileNotFoundException, IOException {
