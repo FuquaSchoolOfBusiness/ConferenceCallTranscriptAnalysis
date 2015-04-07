@@ -78,8 +78,14 @@ public class FindNames {
 //        FindNames fn = new FindNames("/Users/conder/Documents/work/projects/ChrisMoormanProject/TestContent/Call Transcripts",
 //        "/Users/conder/Documents/work/projects/ChrisMoormanProject/BaseLine/BaseAppCode");
         Logic l = new Logic();
-        l.testLexiconPre();
         Date _start = new java.util.Date();
+        System.out.println("Started: " + _start.toString());
+        l.testLexiconPre();
+         Date _end = new java.util.Date();
+        System.out.println("Ended: " + _end.toString());
+        System.out.println("Elapsed: " + (_end.getTime() - _start.getTime()));
+        
+       
         //fn.initializeAndRun();
 //        l.doFindNames(
 //                "/Users/conder/Documents/work/projects/ChrisMoormanProject/BaseLine/BaseAppCode",

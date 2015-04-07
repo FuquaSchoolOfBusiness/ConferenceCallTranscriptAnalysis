@@ -11,6 +11,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -319,90 +320,250 @@ public class Logic {
     
     public void testLexiconPre() throws IOException {
         
-        FileWriter audit = new FileWriter("/Users/conder/audit.txt");
+        // Inputs:
+        //  Generate Audit Files?
+        //
+        //  Location of transcripts?
+        //
+        //  Dictionary 1 (Marketing Terms)
+        //  Dictionary 2 (Knowledge Words)
+        //
+        //  Output location?
+        //
+        //  Distance M-K?
+        //  Output Distance M-K?
+        //
+        //  Output delimiter: Tab, Comma
+        
+        //FileWriter audit = new FileWriter("/Users/conder/audit.txt");
         
         
-        File sample = new File("/Users/conder/VERTEX PHARMACEUTICALS 2008 Q2.txt");
-        //File sample = new File("/Users/conder/VERTEX PHARMACEUTICALS 2009 Q3.txt");
+        File sample = new File("/Users/conder/workdata/VERTEX PHARMACEUTICALS 2008 Q2.txt");
+        //File sample = new File("/Users/conder/workdata/VERTEX PHARMACEUTICALS 2009 Q3.txt");
         
-        //Lexicon lex = this.parseDictionaryFromFile(new File("/Users/conder/Marketing Dictionary.txt"));
+        Lexicon dictionary1 = this.parseDictionaryFromFile(new File("/Users/conder/Marketing Dictionary.txt"));
         
         //Lexicon lex = this.parseDictionaryFromFile(
         //        new File("/Users/conder/Knowledge Dictionary copy.txt"));
-        Lexicon lex = this.parseDictionaryFromFile(
+        Lexicon dictionary2 = this.parseDictionaryFromFile(
                 new File("/Users/conder/Knowledge Dictionary.txt"));
-        lex.exclusions = this.loadExclusionWords("/Users/conder/Excluded Words.txt");
-        lex.audit = audit;       
+        dictionary2.exclusions = this.loadExclusionWords(new File("/Users/conder/Excluded Words.txt"));
+      //  dictionary2.audit = audit; 
+        //dictionary1.exclusions = this.loadExclusionWords("/Users/conder/Excluded Words.txt");
+       // dictionary1.audit = audit;
+                
+        Writer output = new FileWriter("/Users/conder/data.txt");
+        writeHeader(true, true, dictionary1, dictionary2, "\t", output);
         
-        FileReader reader = new FileReader(sample);
+        processFiles(true, true, new File("/Users/conder/Downloads/Coding Files 2/Call Transcripts"), dictionary1, dictionary2, "\t", true, output);
+        
+       // audit.close();
+        output.close();
+    }
+    
+    public void processFiles(
+            Boolean outputCounts,
+            Boolean outputDistances,
+            File directory, 
+            Lexicon dictionary1, 
+            Lexicon dictionary2, 
+            String delimiter, 
+            Boolean audit, 
+            Writer output) {
+        for (File file: directory.listFiles()) {
+            if (file.isDirectory()) {
+                processFiles(outputCounts, outputDistances, file, dictionary1, dictionary2, delimiter, audit, output);
+            } else {
+                if (file.getName().endsWith(".txt")) {
+                    try {
+                        String audit_name = file.getName();
+                        audit_name = audit_name.substring(0, audit_name.lastIndexOf("."));
+                        System.out.println("Processing " + file.getPath() + "...");
+                        dictionary1.reset(); dictionary2.reset();
+                        FileWriter auditFile = null;
+                        if (audit) {
+                            auditFile = new FileWriter(file.getParent() + "/" + audit_name + "_audit.dat");
+                            dictionary1.audit = auditFile; dictionary2.audit = auditFile;
+                        }
+                        processFile(outputCounts, outputDistances, dictionary1, dictionary2, file, delimiter, output);
+                        if (audit) auditFile.close();
+                    } catch (IOException ioe) {
+                        
+                    }
+                }
+            }
+        }
+    }
+    
+    public void writeHeader(
+            Boolean outputCounts,
+            Boolean outputDistances,
+            Lexicon dictionary1, 
+            Lexicon dictionary2, 
+            String delimiter, 
+            Writer output) throws IOException {
+        // PRE HEADERS
+        output.write("Name" + delimiter +  "Year" + delimiter + "Quarter" + delimiter + "Date" + delimiter + "Pre_Total");
+        
+        if (outputCounts) {
+        
+        for (String category: dictionary1.getCategories()) {
+            output.write(delimiter + "Pre_");
+            output.write(category); 
+        }
+        for (String category: dictionary2.getCategories()) {
+            output.write(delimiter + "Pre_");
+            output.write(category); 
+        }
+        
+        }
+        
+        output.write(delimiter + "Post_Total" + delimiter + "Post_Company_Total" + delimiter + "Post_Analyst_Total");
+        
+        if (outputCounts) {
+        // POST COMPANY HEADERS
+        for (String category: dictionary1.getCategories()) {
+            output.write(delimiter + "Post_Company_");
+            output.write(category); 
+        }
+        for (String category: dictionary2.getCategories()) {
+            output.write(delimiter + "Post_Company_");
+            output.write(category); 
+        }
+        // POST ANALYST HEADERS
+        for (String category: dictionary1.getCategories()) {
+            output.write(delimiter + "Post_Analyst_");
+            output.write(category); 
+        }
+        for (String category: dictionary2.getCategories()) {
+            output.write(delimiter +  "Post_Analyst_");
+            output.write(category); 
+        }      
+        }
+        
+        if (outputDistances) {
+        // DISTANCE HEADERS
+        for (String category: dictionary2.getCategories()) {
+            output.write(delimiter +  "D1D2_Pre_");
+            output.write(category);
+        } 
+        for (String category: dictionary2.getCategories()) {
+            output.write(delimiter +  "D1D2_Post_Company_");
+            output.write(category);
+        }
+        for (String category: dictionary2.getCategories()) {
+            output.write(delimiter +  "D1D2_Post_Analyst_");
+            output.write(category);
+        }
+        }
+        
+        output.write("\n");
+        
+    }
+    
+    public void processFile(
+            Boolean outputCounts,
+            Boolean outputDistances,
+            Lexicon dictionary1, 
+            Lexicon dictionary2, 
+            File transcript, 
+            String delimiter,
+            Writer output) throws IOException {
+        
+        FileReader reader = new FileReader(transcript);
         BufferedReader readerx = new BufferedReader(reader);
 		
         Boolean pre_mode = true;
         
+        //name, year, quarter, date, count outputs
+		String file_name = transcript.getName();
+		String[] temp = null;
+		temp = file_name.split(" ");
+		int h = 0;
+		String company_name = "";
+		String year = "";
+		String quarter = "";
+		while ((h < temp.length) && !(temp[h].startsWith("2") | temp[h].startsWith("1"))) {
+            company_name = company_name + temp[h] + " ";
+			h++;
+		}
+		company_name = company_name.substring(0, company_name.length()-1);
+		if (h+1 < temp.length) {
+            year = temp[h];
+            quarter = temp[h+1].substring(0, temp[h+1].length()-4);
+		}
+					
+                    
         LinkedList<Name> lines = new LinkedList<>();
         ArrayList<String> analysts = new ArrayList<>();
         ArrayList<String> companyReps = new ArrayList<>();
         
         int line_number = 0;
         int classify = 3;
+        String date = null;
         
         while (readerx.ready()) {
 			String line = readerx.readLine();
             line_number++;
+            if (line_number < 20 && date == null && Utility.isMonth(line)) {
+                date = this.parseLineForDate(line);
+            }
             if (line.contains("QUESTION AND ANSWER")) {
                 pre_mode = false;
 			} else if (pre_mode) {
-                lex.countWords(line, Lexicon.TYPE_PRE, line_number);
+                List<Match> matches = dictionary1.countWords(line, Lexicon.TYPE_PRE, line_number, null);
+                dictionary2.countWords(line, Lexicon.TYPE_PRE, line_number, matches);
 			} else {
                 String name = "";
                 String title = "";
                 
                 if (line.contains(":")) {
                     String[] pieces = line.split(":");
-                    name = pieces[0];
-                    if (name.contains(",")) {
-                        //Split on comma to remove the name's titles
-                        String[] parts = name.split(",");
-                        name = parts[0].trim();
-                        if (parts.length > 1) title = parts[1].trim();
-                    }
-                    if (name.startsWith("OPERATOR")) {
-                        Name nameObj = Name.generateName(
-                                line_number, 
-                                Name.TYPE_OPERATOR, 
-                                pieces.length > 1 ? pieces[1].trim(): "", 
-                                name);
-                        lines.add(nameObj);
-                        classify = 0; // operator
-                    }
-                    else if (name.toUpperCase().startsWith("[COPYRIGHT")) {
-                        classify = 3; // do nothing
-                    }
-                    else if (name.equals("")) {
-                        if (classify == 0) {
-                            Name nameObj = Name.generateName(
-                                line_number, 
-                                Name.TYPE_OPERATOR, 
-                                pieces.length > 1 ? pieces[1].trim(): "", 
-                                name);
-                            lines.add(nameObj);
-                        } else if (classify == 1) {
-                            Name nameObj = Name.generateName(
-                                line_number, 
-                                Name.TYPE_COMPANY_REP, 
-                                pieces.length > 1 ? pieces[1].trim(): "", 
-                                name);
-                            lines.add(nameObj);
-                        } else if (classify == 2) {
-                            Name nameObj = Name.generateName(
-                                line_number, 
-                                Name.TYPE_ANALYST, 
-                                pieces.length > 1 ? pieces[1].trim(): "", 
-                                name);
-                            lines.add(nameObj);
+                    if (pieces.length > 0) {
+                        name = pieces[0];
+                        if (name.contains(",")) {
+                            //Split on comma to remove the name's titles
+                            String[] parts = name.split(",");
+                            name = parts[0].trim();
+                            if (parts.length > 1) title = parts[1].trim();
                         }
-                    }
-                    else if (analysts.contains(name) || name.contains("ANALYST") || title.contains("ANALYST")) {
+                        if (name.startsWith("OPERATOR")) {
+                            Name nameObj = Name.generateName(
+                                line_number, 
+                                Name.TYPE_OPERATOR, 
+                                pieces.length > 1 ? pieces[1].trim(): "", 
+                                name);
+                            lines.add(nameObj);
+                            classify = 0; // operator
+                        }
+                        else if (name.toUpperCase().startsWith("[COPYRIGHT")) {
+                            classify = 3; // do nothing
+                        }
+                        else if (name.equals("")) {
+                            if (classify == 0) {
+                                Name nameObj = Name.generateName(
+                                    line_number, 
+                                    Name.TYPE_OPERATOR, 
+                                    pieces.length > 1 ? pieces[1].trim(): "", 
+                                    name);
+                                lines.add(nameObj);
+                            } else if (classify == 1) {
+                                Name nameObj = Name.generateName(
+                                    line_number, 
+                                    Name.TYPE_COMPANY_REP, 
+                                    pieces.length > 1 ? pieces[1].trim(): "", 
+                                    name);
+                                lines.add(nameObj);
+                            } else if (classify == 2) {
+                                Name nameObj = Name.generateName(
+                                    line_number, 
+                                    Name.TYPE_ANALYST, 
+                                    pieces.length > 1 ? pieces[1].trim(): "", 
+                                    name);
+                                lines.add(nameObj);
+                            }
+                        }
+                        else if (analysts.contains(name) || name.contains("ANALYST") || title.contains("ANALYST")) {
                             Name nameObj = Name.generateName(
                                 line_number, 
                                 Name.TYPE_ANALYST, 
@@ -411,9 +572,9 @@ public class Logic {
                             lines.add(nameObj);
                             classify = 2;
                             if (!analysts.contains(name)) analysts.add(name);
-                            System.out.println("classified as analyst - case 6");
-                    }
-                    else if (companyReps.contains(name)) { //|| arrayContains(myNames.get(i), name)) {
+                            logger.fine(name + "classified as analyst - case 6");
+                        }
+                        else if (companyReps.contains(name)) { //|| arrayContains(myNames.get(i), name)) {
                             Name nameObj = Name.generateName(
                                 line_number, 
                                 Name.TYPE_COMPANY_REP, 
@@ -422,10 +583,10 @@ public class Logic {
                             lines.add(nameObj);
                             if (!companyReps.contains(name)) companyReps.add(name);
                             classify = 1;
-                            System.out.println("classified as company rep - case 7");
-                    }
+                            logger.fine(name + "classified as company rep - case 7");
+                        }
                         // The operator introduces analysts
-                    else if (classify == 0) {
+                        else if (classify == 0) {
                             Name nameObj = Name.generateName(
                                 line_number, 
                                 Name.TYPE_ANALYST, 
@@ -434,11 +595,11 @@ public class Logic {
                             lines.add(nameObj);
                             classify = 2;
                             if (!analysts.contains(name)) analysts.add(name);
-                            System.out.println("classified as analyst - case 8");
-                    }
+                            logger.fine(name + "classified as analyst - case 8");
+                        }
                         // If name is listed in company representative array add to
                         // company statements
-                    else {
+                        else {
                             Name nameObj = Name.generateName(
                                 line_number, 
                                 Name.TYPE_COMPANY_REP, 
@@ -447,10 +608,10 @@ public class Logic {
                             lines.add(nameObj);
                             if (!companyReps.contains(name)) companyReps.add(name);
                             classify = 1;
-                            System.out.println("classified as company rep - case 10");
-                    }
+                            logger.fine(name + "classified as company rep - case 10");
+                        }
                         
-                    
+                    }
                 } else {
                         if (classify == 0) {
                             Name nameObj = Name.generateName(
@@ -479,49 +640,134 @@ public class Logic {
         }
         
         for (Name name: lines) {
-            if (name.getType() == Name.TYPE_COMPANY_REP) 
-                lex.countWords(name.getLine(), Lexicon.TYPE_POST_COMPANY, name.getNumber());
-            else if (name.getType() == Name.TYPE_ANALYST)
-                lex.countWords(name.getLine(), Lexicon.TYPE_POST_ANALYST, name.getNumber());
+            if (name.getType() == Name.TYPE_COMPANY_REP) { 
+                List<Match> matches = dictionary1.countWords(name.getLine(), Lexicon.TYPE_POST_COMPANY, name.getNumber(), null);
+                dictionary2.countWords(name.getLine(), Lexicon.TYPE_POST_COMPANY, name.getNumber(), matches);
+            } else if (name.getType() == Name.TYPE_ANALYST) {
+                List<Match> matches = dictionary1.countWords(name.getLine(), Lexicon.TYPE_POST_ANALYST, name.getNumber(), null);
+                dictionary2.countWords(name.getLine(), Lexicon.TYPE_POST_ANALYST, name.getNumber(), matches);
+            }
         }
         
+        // TRANSCRIPT VALUES
+        output.write(company_name);
+        output.write( delimiter );
+        output.write(year);
+        output.write( delimiter );
+        output.write(quarter);
+        output.write( delimiter );
+        output.write( date == null ? "": date );
+        output.write( delimiter );
+        
+        // PRE VALUES
+        output.write(String.valueOf(dictionary1.preCountAllWords));// +":" + dictionary2.preCountAllWords);
+        if (outputCounts) {
+        for (String category: dictionary1.getCategories()) {
+            output.write(delimiter);
+            output.write(
+                    dictionary1.preCountCategoryWords.get(category) == null ? "0":
+                        String.valueOf(dictionary1.preCountCategoryWords.get(category))
+            );  
+        }
+        for (String category: dictionary2.getCategories()) {
+            output.write(delimiter);
+            output.write(
+                    dictionary2.preCountCategoryWords.get(category) == null ? "0":
+                        String.valueOf(dictionary2.preCountCategoryWords.get(category))
+            ); 
+        }
+        }
+        output.write(delimiter);
+        output.write(String.valueOf(dictionary1.postCountAllCompanyWords + dictionary1.postCountAllAnalystWords));// + ":" + (dictionary2.postCountAllCompanyWords + dictionary2.postCountAllAnalystWords));
+        output.write(delimiter);
+        output.write(String.valueOf(dictionary1.postCountAllCompanyWords));// +":" + dictionary2.postCountAllCompanyWords);
+        output.write(delimiter);
+        output.write(String.valueOf(dictionary1.postCountAllAnalystWords));// +":" + dictionary2.postCountAllAnalystWords);
+        
+        // POST COMPANY VALUES
+        if (outputCounts) {
+        for (String category: dictionary1.getCategories()) {
+            output.write(delimiter);
+            output.write(
+                    dictionary1.postCountCategoryCompanyWords.get(category) == null ? "0":
+                    String.valueOf(dictionary1.postCountCategoryCompanyWords.get(category))
+            ); 
+        }
+        for (String category: dictionary2.getCategories()) {
+            output.write(delimiter);
+            output.write(
+                    dictionary2.postCountCategoryCompanyWords.get(category) == null ? "0":
+                    String.valueOf(dictionary2.postCountCategoryCompanyWords.get(category))
+            ); 
+        }
+        // POST ANALYST VALUES
+        for (String category: dictionary1.getCategories()) {
+            output.write(delimiter);
+            output.write(
+                    dictionary1.postCountCategoryAnalystWords.get(category) == null ? "0":
+                    String.valueOf(dictionary1.postCountCategoryAnalystWords.get(category))
+            );
+        }
+        for (String category: dictionary2.getCategories()) {
+            output.write(delimiter);
+            output.write(
+                    dictionary2.postCountCategoryAnalystWords.get(category) == null ? "0":
+                    String.valueOf(dictionary2.postCountCategoryAnalystWords.get(category))
+            ); 
+        }           
+        }
+        
+        // DIFFERENCE COUNTS
+        if (outputDistances) {
+        for (String category: dictionary2.getCategories()) {
+            output.write(delimiter);
+            output.write(
+                    dictionary2.distanceCounters.get("PRE_" + category) == null ? "0":
+                            String.valueOf(dictionary2.distanceCounters.get("PRE_" + category))
+            ); 
+        }
+        for (String category: dictionary2.getCategories()) {
+            output.write(delimiter);
+            output.write(
+                    dictionary2.distanceCounters.get("POST_COMPANY_" + category) == null ? "0":
+                            String.valueOf(dictionary2.distanceCounters.get("POST_COMPANY_" + category))
+            ); 
+        }
+        for (String category: dictionary2.getCategories()) {
+            output.write(delimiter);
+            output.write(
+                    dictionary2.distanceCounters.get("POST_ANALYST_" + category) == null ? "0":
+                            String.valueOf(dictionary2.distanceCounters.get("POST_ANALYST_" + category))
+            ); 
+        }
+        }
+        output.write("\n");
+        
         readerx.close();
-        audit.close();
-        System.out.println("1: " + String.valueOf(lex.preCountCategoryWords.get("Stock")));
-        System.out.println("2: " + String.valueOf(lex.preCountCategoryWords.get("Search")));
-        System.out.println("3: " + String.valueOf(lex.preCountCategoryWords.get("Acquisition")));
-        System.out.println("4: " + String.valueOf(lex.preCountCategoryWords.get("Process")));
-        System.out.println("5: " + String.valueOf(lex.preCountCategoryWords.get("Storage")));
-        System.out.println("6: " + String.valueOf(lex.preCountCategoryWords.get("Transfer")));
-        System.out.println("7: " + String.valueOf(lex.preCountCategoryWords.get("Application")));
-        System.out.println("1: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Stock")));
-        System.out.println("2: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Search")));
-        System.out.println("3: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Acquisition")));
-        System.out.println("4: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Process")));
-        System.out.println("5: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Storage")));
-        System.out.println("6: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Transfer")));
-        System.out.println("7: " + String.valueOf(lex.postCountCategoryCompanyWords.get("Application")));
-        System.out.println("1: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Stock")));
-        System.out.println("2: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Search")));
-        System.out.println("3: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Acquisition")));
-        System.out.println("4: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Process")));
-        System.out.println("5: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Storage")));
-        System.out.println("6: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Transfer")));
-        System.out.println("7: " + String.valueOf(lex.postCountCategoryAnalystWords.get("Application")));
-        System.out.println("size: " + lex.size());
-        System.out.println("precountall:" + lex.preCountAllWords);
-        System.out.println("allwords:" + lex.countAllWords);
-        System.out.println("prealldictionary: " + lex.preCountAllDictionaryWords);
         
-        System.out.println("postcountallan: " + lex.postCountAllAnalystWords);
-        System.out.println("postcountallco: " + lex.postCountAllCompanyWords);
+        if (dictionary1.audit != null) {
+            dictionary1.audit.write("COMPANY REPRESENTATIVES\n");
+            dictionary1.audit.write(companyReps.toString());
+            dictionary1.audit.write("\n");
+            dictionary1.audit.write("ANALYSTS\n");
+            dictionary1.audit.write(analysts.toString());
+            dictionary1.audit.write("\n");
+        }
         
+              
+//        audit.close();
+
+        //System.out.println("size: " + dictionary2.size());
+        //System.out.println("precountall:" + dictionary2.preCountAllWords);
+        //System.out.println("allwords:" + dictionary2.countAllWords);
+        //System.out.println("prealldictionary: " + dictionary2.preCountAllDictionaryWords);
         
-        System.out.println("ANALYSTS: " + analysts.toString());
-        System.out.println("REPS:" + companyReps.toString());
+        //System.out.println("postcountallan: " + dictionary2.postCountAllAnalystWords);
+        //System.out.println("postcountallco: " + dictionary2.postCountAllCompanyWords);
+        
     }
     
-    public List<String> loadExclusionWords(String path) throws FileNotFoundException, IOException {
+    public List<String> loadExclusionWords(File path) throws FileNotFoundException, IOException {
         List<String> list = new ArrayList<>();
         BufferedReader br = new BufferedReader(new FileReader(path));
         while (br.ready()) {
@@ -533,4 +779,49 @@ public class Logic {
         return list;
     }
     
+    public String parseLineForDate(String line) {
+        
+			String[] lineArray = line.split(" ");
+			if (!Utility.isMonth(lineArray[0]) && !Utility.isMonth(lineArray[1])) { 
+                // example: Q1 2003 Abbott
+				// Laboratories Earnings
+				// Conference Call - Final FD
+				// (Fair Disclosure) Wire April
+				// 9, 2003 Wednesday
+				int z = 0;
+	  			String m = "", d = "", y = "";
+				  
+	  			while (z < lineArray.length) {
+                    if (Utility.isMonth(lineArray[z])) {
+                        m = lineArray[z];
+	  					break;
+	  				}
+	  				z++;
+	  			}
+				  
+	  			if (lineArray.length > (z + 2)) {
+                    d = lineArray[z + 1].replace(",","");
+					d = d.replaceAll("[^\\d]", "");
+	  				y = lineArray[z + 2].replace(".","");
+					if (Utility.isNumeric(d) && Utility.isNumeric(y)) {
+                        return d + " " + m + " " + y;
+					}
+	  			}
+			} else {
+				// example: April 9, 2002 (need to transform it to 9 April 2002)
+				if (line.contains(",")) {
+                    lineArray[1] = lineArray[1].replace(",", "");
+					return lineArray[1] + " " + lineArray[0] + " " + lineArray[2];
+				} // example: 9 April 2002 
+				else 
+                {
+                    if (line.contains("/")) {
+                        String[] parts = line.split("/");
+						line = parts[0].trim();
+					}
+					return line;
+				}
+			}
+			return null;
+    }
 }

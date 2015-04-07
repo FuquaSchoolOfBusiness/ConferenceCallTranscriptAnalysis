@@ -96,6 +96,37 @@ public class Utility {
 		return words;
 	}
 	
+	public static String[] splitAndMaskWordsAroundNotLeavePunctuation(String text) {
+        String[] words = text.split("\\s+");
+        //ignore words around "not" (next to, or one word away) - G.H. (this can be much more efficient with a regex)
+        for (int i=0; i<words.length; i++) {
+        	if (words[i].equalsIgnoreCase("not")) {
+        		if (i - 2 > 0) words[i-2] = "NNNNN";
+        		if (i - 1 > 0) words[i-1] = "NNNNN";
+        		if (i + 1 < words.length) words[i+1] = "NNNNN";
+        		if (i + 2 < words.length) words[i+2] = "NNNNN";
+        		i += 2;
+        	}
+        }
+		return words;
+	}
+    
+    public static boolean sameSentence(Integer word1, Integer word2, String line) {
+        String[] words = splitAndMaskWordsAroundNotLeavePunctuation(line);
+        Integer start = word1 < word2 ? word1: word2;
+        Integer end = word1 < word2 ? word2: word1;
+        for (int i=start; i < end; i++) {
+            if (words[i].contains(".") || 
+                    words[i].contains("?") || 
+                    words[i].contains("!") || 
+                    words[i].contains(",") ||
+                    words[i].contains(";") ||
+                    words[i].contains(":"))
+                return false;
+        }
+        return true;
+    }
+    
 	public static boolean isExcludedWord(String word, List<String> pertinentExcludedWords) {
 		for (String EWord : pertinentExcludedWords) {
 			if (word.startsWith(EWord.toLowerCase())) {
@@ -105,6 +136,11 @@ public class Utility {
 		return false;
 	}
 	
+    public static boolean isNumeric(String str)
+    {
+      return str.matches("-?\\d+(\\.\\d+)?");
+    }
+    
 	public static boolean isMonth(String str) {
 		str = str.toLowerCase();
 		if (str.contains("january") | str.contains("february")

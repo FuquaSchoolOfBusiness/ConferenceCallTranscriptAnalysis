@@ -84,6 +84,7 @@ public class Lexicon extends LinkedList {
     Integer countAllWords = 0;                      // Count of all words in document
     Integer preCountAllWords = 0;                   // Count of all words in PRE section
     Integer preCountAllDictionaryWords = 0;         // Count of all dictionary words in PRE section
+    Integer distanceBetweenWords = 3;               // Maximum number of words between stems
     Map<String, Integer> preCountCategoryWords =    // Count of all dictionary words in a particular category
             new HashMap<>();
     
@@ -94,7 +95,22 @@ public class Lexicon extends LinkedList {
     Map<String, Integer> postCountCategoryAnalystWords =    // Count of all dictionary words in a particular category for analysts
             new HashMap<>(); 
     
-    public void incrementCountCategories(int type, String word, Term key, Map<String, Integer> map, Integer line_number) {
+    Map<String, Integer> distanceCounters = new HashMap<>();
+    
+    public void reset() {
+        audit = null;
+        countAllWords = 0;
+        preCountAllWords = 0;
+        preCountAllDictionaryWords = 0;
+        postCountAllCompanyWords = 0;
+        postCountAllAnalystWords = 0;
+        preCountCategoryWords.clear();
+        postCountCategoryCompanyWords.clear();
+        postCountCategoryAnalystWords.clear();
+        distanceCounters.clear();
+    }
+    
+    public void incrementCountCategories(int type, String word, Term key, Map<String, Integer> map, Integer line_number, Integer word_number) {
         
         Logger.getGlobal().fine("," +type + "," + word + "," + key.getCategory() + "," + key.getTerm());
         if (map.containsKey(key.getCategory())) {
@@ -110,10 +126,12 @@ public class Lexicon extends LinkedList {
         // Write to audit file:
         // LINE#: type, word, term, category
         if (audit != null) {
-        System.out.println( line_number );          
             try {
                 audit.write(String.valueOf(line_number));
+                audit.write(",");
+                audit.write(String.valueOf(word_number));
                 audit.write(":");
+                audit.write("WORD MATCH,");
                 audit.write(type == TYPE_PRE ? "PRE": type == TYPE_POST_ANALYST ? "POST-ANALYST": "POST-COMPANY");
                 audit.write(",");
                 audit.write(word);
@@ -131,7 +149,7 @@ public class Lexicon extends LinkedList {
     }
     
     public void countPreWords(String line, int line_number) {
-        countWords(line, TYPE_PRE, line_number);
+        countWords(line, TYPE_PRE, line_number, null);
     }
     public void countPostWords() {
         
@@ -141,8 +159,83 @@ public class Lexicon extends LinkedList {
     static Integer TYPE_POST_ANALYST = 2;
     static Integer TYPE_POST_COMPANY = 3;
     
-    public void countWords(String line, int type, int line_number) {
+    public void checkWordRelations(Match match, List<Match> wordRelations, String line) {
+        
+        // To check word relations, we must split the line
+        // into constituent fragments.
+        // Do not include if the punctuation .?!,;: exists between 
+        // word1 and word2.  
+        
+        for (Match relation: wordRelations) {
+            /*if (match.line_number == 299) {
+                System.out.println(
+                        match.getWord()+ " (" + 
+                                match.getWord_number() + 
+                                ") relation " + 
+                                relation.getWord() + 
+                                " (" + 
+                                relation.getWord_number() + 
+                                ") " +
+                                relation.line_number +
+                                (match.line_number.equals(relation.line_number)) +
+                                Math.abs(match.word_number - relation.word_number) +
+                                Utility.sameSentence(match.word_number, relation.word_number, line)
+            }*/
+            if (match.line_number.equals(relation.line_number) &&
+                    !match.word_number.equals(relation.word_number) &&
+                    Math.abs(match.word_number - relation.word_number) < (distanceBetweenWords + 2) &&
+                    Utility.sameSentence(match.word_number, relation.word_number, line)) {
                 
+                String the_type = match.getType() == TYPE_PRE ? 
+                        "PRE": match.getType() == TYPE_POST_ANALYST ? "POST_ANALYST": "POST_COMPANY";
+                
+                if (distanceCounters.containsKey(the_type + "_" + match.getTerm().getCategory())) {
+                    Integer cc = distanceCounters.get(the_type + "_" + match.getTerm().getCategory());
+                    cc++;
+                    distanceCounters.put(
+                        the_type + "_" + match.getTerm().getCategory(), cc);
+                } else {
+                    distanceCounters.put(
+                        the_type + "_" + match.getTerm().getCategory(), 
+                        new Integer(1));
+                }
+                
+                try {
+                    if (audit != null){
+                    audit.write(String.valueOf(match.getLine_number()));
+                    audit.write(":");
+                    audit.write("DISTANCE MATCH,");
+                    audit.write(match.getType() == TYPE_PRE ? 
+                            "PRE": match.getType() == TYPE_POST_ANALYST ? "POST_ANALYST": "POST_COMPANY");
+                    audit.write(",");
+                    audit.write(match.getWord());
+                    audit.write(",");
+                    audit.write(String.valueOf(match.getWord_number()));
+                    audit.write(",");
+                    audit.write(relation.getWord());
+                    audit.write(",");
+                    audit.write(String.valueOf(relation.getWord_number()));
+                    audit.write(",");
+                    audit.write(String.valueOf(Math.abs(match.getWord_number() - relation.getWord_number()) - 1));
+                    audit.write(",");
+                    audit.write(match.getTerm().getCategory());
+                    audit.write("\n");
+                    }
+                } catch (IOException io) {
+                    
+                }
+                
+            }
+        }
+        
+    }
+    
+    public List<Match> countWords(String line, int type, int line_number, List<Match> wordRelations) {
+              
+        List<Match> matches = new LinkedList<>();
+        
+        String[] wordsInLine = Utility.splitAndMaskWordsAroundNot(line);
+        
         // Handle phrases differently than words
         Iterator<Term> terms = this.iterator();
         while (terms.hasNext()) {
@@ -153,14 +246,12 @@ public class Lexicon extends LinkedList {
 				while (index >= 0) {
 					index = nLine.indexOf(term.getTerm());
 					if (index >= 0) {
-                        // In original code, phrases do not appear to increment
-                        // overall pre word count.. should VERIFY
                         if (type == TYPE_PRE) {
-                            incrementCountCategories(type, nLine, term, preCountCategoryWords, line_number);
+                            incrementCountCategories(type, nLine, term, preCountCategoryWords, line_number, null);
                         } else if (type == TYPE_POST_ANALYST) {
-                            incrementCountCategories(type, nLine, term, postCountCategoryAnalystWords, line_number);
+                            incrementCountCategories(type, nLine, term, postCountCategoryAnalystWords, line_number, null);
                         } else if (type == TYPE_POST_COMPANY) {
-                            incrementCountCategories(type, nLine, term, postCountCategoryCompanyWords, line_number);
+                            incrementCountCategories(type, nLine, term, postCountCategoryCompanyWords, line_number, null);
                         }
 						nLine = nLine.substring(index + term.getTerm().length());
 					}
@@ -168,7 +259,6 @@ public class Lexicon extends LinkedList {
             } 
         }
         
-        String[] wordsInLine = Utility.splitAndMaskWordsAroundNot(line);
         for (int j = 0; j < wordsInLine.length; j++) {
             
             boolean processed = false;
@@ -194,17 +284,33 @@ public class Lexicon extends LinkedList {
                                 preCountAllDictionaryWords++;
                                 processed = true;
                             }
-                            incrementCountCategories(type, word, term, preCountCategoryWords, line_number);
+                            incrementCountCategories(type, word, term, preCountCategoryWords, line_number, j);
                         } else if (type == TYPE_POST_ANALYST) {
-                            incrementCountCategories(type, word, term, postCountCategoryAnalystWords, line_number);
+                            incrementCountCategories(type, word, term, postCountCategoryAnalystWords, line_number, j);
                         } else if (type == TYPE_POST_COMPANY) {
-                            incrementCountCategories(type, word, term, postCountCategoryCompanyWords, line_number);
+                            incrementCountCategories(type, word, term, postCountCategoryCompanyWords, line_number, j);
                         }
+                        
+                        Match match = new Match();
+                        match.setLine_number(line_number);
+                        match.setWord_number(j);
+                        match.setWord(word);
+                        match.setTerm(term);
+                        match.setType(type);
+                        matches.add(match);
+                        
+         //if (line_number == 299) System.out.println("LINE 299: " + match.getWord_number() + " " + match.getWord());
+                        if (wordRelations != null) {
+                            checkWordRelations(match, wordRelations, line);
+                        }
+                        
                         break; 
                 }    
             }
+            
         }        
         
+        return matches;
     }
     /**
      * END COUNTING METHODS
