@@ -190,7 +190,7 @@ public class Dictionary extends LinkedList {
                 }
                 
                 if (Math.abs(matchWordNumber - relationWordNumber) < (distanceBetweenWords + 2) &&
-                    Utility.sameSentence(matchWordNumber, relationWordNumber, line)) {
+                    Logic.sameSentence(matchWordNumber, relationWordNumber, line)) {
                 
                     String the_type = match.getType() == TYPE_PRE ? 
                         "PRE": match.getType() == TYPE_POST_ANALYST ? "POST_ANALYST": "POST_COMPANY";
@@ -244,7 +244,7 @@ public class Dictionary extends LinkedList {
               
         List<Match> matches = new LinkedList<>();
         
-        String[] wordsInLine = Utility.splitAndMaskWordsAroundNot(line);
+        String[] wordsInLine = Logic.splitAndMaskWordsAroundNot(line);
         
         // Handle phrases differently than words
         // Changing algorithm to look for phrases based on parsed words...
@@ -253,7 +253,7 @@ public class Dictionary extends LinkedList {
         Iterator<Term> terms = this.iterator();
         while (terms.hasNext()) {
             Term term = terms.next();
-            if (Utility.isPhrase(term.getTerm())) {
+            if (Logic.isPhrase(term.getTerm())) {
                 if (line.contains(term.getTerm())) {
                     // line has phrase.. now check out matches
                     String[] parts = term.getTerm().split(" ");
@@ -320,7 +320,7 @@ public class Dictionary extends LinkedList {
             
                 Term term = (Term)this.get(i);
                 if (word.startsWith(term.getTerm().toLowerCase()) && 
-                            !Utility.isExcludedWord(word, exclusions)) {
+                            !Logic.isExcludedWord(word, exclusions)) {
                         
                         if (type == TYPE_PRE) {
                             if (!processed) {

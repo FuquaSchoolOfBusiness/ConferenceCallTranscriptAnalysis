@@ -13,20 +13,17 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Scanner;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.swing.SwingUtilities;
 
 /**
- *
+ * Logic contains many functions of the application.
  * @author conder
  */
 public class Logic {
@@ -49,20 +46,7 @@ public class Logic {
   TreeMap<String, List<String>> results;
   PrintWriter namesOutput;
   PrintWriter companiesOutput;
-    
-/**
- * AUDIT FILES
- * Generate one audit file per company.
- * Audit file will be structured as:
- * 2009 Q3 (VERTEX PHARMACEUTICALS 2009 Q3.txt)
- * 21: PRE, word, matched term, category
- * 54: POST-COMPANY, word, matches, term, category
- * 55: POST-ANALYST, word, matches, term, category
- * CATEGORY: 3, CATEGORY: 5, CATEGORY: N
- * 
- */  
-  
-  
+      
 /**
  * Parse company name from file (name of file).
  * @param file
@@ -515,7 +499,7 @@ public class Logic {
         while (readerx.ready()) {
 			String line = readerx.readLine();
             line_number++;
-            if (line_number < 20 && date == null && Utility.isMonth(line)) {
+            if (line_number < 20 && date == null && Logic.isMonth(line)) {
                 date = this.parseLineForDate(line);
             }
             if (line.contains("QUESTION AND ANSWER")) {
@@ -795,7 +779,7 @@ public class Logic {
     public String parseLineForDate(String line) {
         
 			String[] lineArray = line.split(" ");
-			if (!Utility.isMonth(lineArray[0]) && !Utility.isMonth(lineArray[1])) { 
+			if (!Logic.isMonth(lineArray[0]) && !Logic.isMonth(lineArray[1])) { 
                 // example: Q1 2003 Abbott
 				// Laboratories Earnings
 				// Conference Call - Final FD
@@ -805,7 +789,7 @@ public class Logic {
 	  			String m = "", d = "", y = "";
 				  
 	  			while (z < lineArray.length) {
-                    if (Utility.isMonth(lineArray[z])) {
+                    if (Logic.isMonth(lineArray[z])) {
                         m = lineArray[z];
 	  					break;
 	  				}
@@ -816,7 +800,7 @@ public class Logic {
                     d = lineArray[z + 1].replace(",","");
 					d = d.replaceAll("[^\\d]", "");
 	  				y = lineArray[z + 2].replace(".","");
-					if (Utility.isNumeric(d) && Utility.isNumeric(y)) {
+					if (Logic.isNumeric(d) && Logic.isNumeric(y)) {
                         return d + " " + m + " " + y;
 					}
 	  			}
@@ -837,4 +821,95 @@ public class Logic {
 			}
 			return null;
     }
+    
+    public static boolean isNumeric(String str)
+    {
+      return str.matches("-?\\d+(\\.\\d+)?");
+    }
+    
+	public static boolean isMonth(String str) {
+		str = str.toLowerCase();
+		if (str.contains("january") | str.contains("february")
+				| str.contains("march") | str.contains("april")
+				| str.contains("may") | str.contains("june")
+				| str.contains("july") | str.contains("august")
+				| str.contains("september") | str.contains("october")
+				| str.contains("november") | str.contains("december")
+				| str.equals("jan") | str.equals("feb")
+				| str.equals("mar") | str.equals("apr")
+				| str.equals("jun") | str.equals("jul")
+				| str.equals("aug") | str.equals("sep")
+				| str.equals("oct") | str.equals("nov") | str.equals("dec") ) {
+			return true;
+		} else {
+			return false;
+		}
+	}    
+    
+	public static String[] splitAndMaskWordsAroundNot(String text) {
+        String[] words = text.split("\\s+");
+        //ignore words around "not" (next to, or one word away) - G.H. (this can be much more efficient with a regex)
+        for (int i=0; i<words.length; i++) {
+        	words[i] = stripEndingPunctuation(words[i]);
+        	if (words[i].equalsIgnoreCase("not")) {
+        		if (i - 2 > 0) words[i-2] = "NNNNN";
+        		if (i - 1 > 0) words[i-1] = "NNNNN";
+        		if (i + 1 < words.length) words[i+1] = "NNNNN";
+        		if (i + 2 < words.length) words[i+2] = "NNNNN";
+        		i += 2;
+        	}
+        }
+		return words;
+	}
+	
+	public static String[] splitAndMaskWordsAroundNotLeavePunctuation(String text) {
+        String[] words = text.split("\\s+");
+        //ignore words around "not" (next to, or one word away) - G.H. (this can be much more efficient with a regex)
+        for (int i=0; i<words.length; i++) {
+        	if (words[i].equalsIgnoreCase("not")) {
+        		if (i - 2 > 0) words[i-2] = "NNNNN";
+        		if (i - 1 > 0) words[i-1] = "NNNNN";
+        		if (i + 1 < words.length) words[i+1] = "NNNNN";
+        		if (i + 2 < words.length) words[i+2] = "NNNNN";
+        		i += 2;
+        	}
+        }
+		return words;
+	}
+
+    public static boolean sameSentence(Integer word1, Integer word2, String line) {
+        String[] words = splitAndMaskWordsAroundNotLeavePunctuation(line);
+        Integer start = word1 < word2 ? word1: word2;
+        Integer end = word1 < word2 ? word2: word1;
+        for (int i=start; i < end; i++) {
+            if (words[i].contains(".") || 
+                    words[i].contains("?") || 
+                    words[i].contains("!") || 
+                    words[i].contains(",") ||
+                    words[i].contains(";") ||
+                    words[i].contains(":"))
+                return false;
+        }
+        return true;
+    }
+    
+	public static String stripEndingPunctuation(String str) {
+		str = str.replaceFirst("^[^a-zA-Z]+", "");
+		str = str.replaceAll("[^a-zA-Z]+$", "");
+		return str;
+	}
+
+    public static Boolean isPhrase(String s) {
+        return s.contains(" ");
+    }
+    
+	public static boolean isExcludedWord(String word, List<String> pertinentExcludedWords) {
+		for (String EWord : pertinentExcludedWords) {
+			if (word.startsWith(EWord.toLowerCase())) {
+				return true;
+			}
+		}
+		return false;
+	}
+    
 }
