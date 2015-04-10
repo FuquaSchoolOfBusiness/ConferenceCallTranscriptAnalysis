@@ -43,7 +43,7 @@ public class Logic {
             e.printStackTrace();
         }
     }
-    logger = Logger.getLogger(FindNames.class.getCanonicalName());
+    logger = Logger.getLogger(MainFrame.class.getCanonicalName());
   }
   
   TreeMap<String, List<String>> results;
@@ -238,8 +238,8 @@ public class Logic {
  * @param f
  * @return 
  */    
-    public Lexicon parseDictionaryFromFile(File file) throws FileNotFoundException, IOException {
-        Lexicon lexicon = new Lexicon();
+    public Dictionary parseDictionaryFromFile(File file) throws FileNotFoundException, IOException {
+        Dictionary lexicon = new Dictionary();
         int linenum = 0;
         if (file.getName().endsWith("txt")) {		
             String filename = file.getPath();
@@ -268,7 +268,7 @@ public class Logic {
         Logger.getGlobal().finest("Dictionary has " + lexicon.size() + " terms.");
         return lexicon;
     }
-    private void addItemToDictionary(Lexicon lexicon, String word, String category, Integer order) {
+    private void addItemToDictionary(Dictionary lexicon, String word, String category, Integer order) {
         if (!lexicon.contains(word)) {
             Term term = new Term();
             term.setCategory(category);
@@ -343,11 +343,11 @@ public class Logic {
         File sample = new File("/Users/conder/workdata/VERTEX PHARMACEUTICALS 2008 Q2.txt");
         //File sample = new File("/Users/conder/workdata/VERTEX PHARMACEUTICALS 2009 Q3.txt");
         
-        Lexicon dictionary1 = this.parseDictionaryFromFile(new File("/Users/conder/Marketing Dictionary.txt"));
+        Dictionary dictionary1 = this.parseDictionaryFromFile(new File("/Users/conder/Marketing Dictionary.txt"));
         
         //Lexicon lex = this.parseDictionaryFromFile(
         //        new File("/Users/conder/Knowledge Dictionary copy.txt"));
-        Lexicon dictionary2 = this.parseDictionaryFromFile(
+        Dictionary dictionary2 = this.parseDictionaryFromFile(
                 new File("/Users/conder/Knowledge Dictionary.txt"));
         dictionary2.exclusions = this.loadExclusionWords(new File("/Users/conder/Excluded Words.txt"));
       //  dictionary2.audit = audit; 
@@ -367,8 +367,8 @@ public class Logic {
             Boolean outputCounts,
             Boolean outputDistances,
             File directory, 
-            Lexicon dictionary1, 
-            Lexicon dictionary2, 
+            Dictionary dictionary1, 
+            Dictionary dictionary2, 
             String delimiter, 
             Boolean audit, 
             MainFrame mf,
@@ -408,8 +408,8 @@ public class Logic {
     public void writeHeader(
             Boolean outputCounts,
             Boolean outputDistances,
-            Lexicon dictionary1, 
-            Lexicon dictionary2, 
+            Dictionary dictionary1, 
+            Dictionary dictionary2, 
             String delimiter, 
             Writer output) throws IOException {
         // PRE HEADERS
@@ -474,8 +474,8 @@ public class Logic {
     public void processFile(
             Boolean outputCounts,
             Boolean outputDistances,
-            Lexicon dictionary1, 
-            Lexicon dictionary2, 
+            Dictionary dictionary1, 
+            Dictionary dictionary2, 
             File transcript, 
             String delimiter,
             Writer output) throws IOException {
@@ -521,8 +521,8 @@ public class Logic {
             if (line.contains("QUESTION AND ANSWER")) {
                 pre_mode = false;
 			} else if (pre_mode) {
-                List<Match> matches = dictionary1.countWords(line, Lexicon.TYPE_PRE, line_number, null);
-                dictionary2.countWords(line, Lexicon.TYPE_PRE, line_number, matches);
+                List<Match> matches = dictionary1.countWords(line, Dictionary.TYPE_PRE, line_number, null);
+                dictionary2.countWords(line, Dictionary.TYPE_PRE, line_number, matches);
 			} else {
                 String name = "";
                 String title = "";
@@ -654,11 +654,11 @@ public class Logic {
         
         for (Name name: lines) {
             if (name.getType() == Name.TYPE_COMPANY_REP) { 
-                List<Match> matches = dictionary1.countWords(name.getLine(), Lexicon.TYPE_POST_COMPANY, name.getNumber(), null);
-                dictionary2.countWords(name.getLine(), Lexicon.TYPE_POST_COMPANY, name.getNumber(), matches);
+                List<Match> matches = dictionary1.countWords(name.getLine(), Dictionary.TYPE_POST_COMPANY, name.getNumber(), null);
+                dictionary2.countWords(name.getLine(), Dictionary.TYPE_POST_COMPANY, name.getNumber(), matches);
             } else if (name.getType() == Name.TYPE_ANALYST) {
-                List<Match> matches = dictionary1.countWords(name.getLine(), Lexicon.TYPE_POST_ANALYST, name.getNumber(), null);
-                dictionary2.countWords(name.getLine(), Lexicon.TYPE_POST_ANALYST, name.getNumber(), matches);
+                List<Match> matches = dictionary1.countWords(name.getLine(), Dictionary.TYPE_POST_ANALYST, name.getNumber(), null);
+                dictionary2.countWords(name.getLine(), Dictionary.TYPE_POST_ANALYST, name.getNumber(), matches);
             }
         }
         

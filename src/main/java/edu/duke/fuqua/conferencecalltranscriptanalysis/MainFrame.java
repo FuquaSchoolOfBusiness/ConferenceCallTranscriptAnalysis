@@ -410,8 +410,8 @@ SwingWorker worker = new SwingWorker<Void, Void>() {
  Date started = new java.util.Date();
         outputDisplay.setText("Started processing files at " + (started) + ".\n");
         Logic logic = new Logic();
-        Lexicon dictionary1 = null;
-        Lexicon dictionary2 = null;
+        Dictionary dictionary1 = null;
+        Dictionary dictionary2 = null;
                 
         Writer output;
         try {
