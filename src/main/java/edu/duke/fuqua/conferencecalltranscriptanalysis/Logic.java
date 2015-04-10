@@ -23,6 +23,7 @@ import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.swing.SwingUtilities;
 
 /**
  *
@@ -242,6 +243,7 @@ public class Logic {
         int linenum = 0;
         if (file.getName().endsWith("txt")) {		
             String filename = file.getPath();
+            lexicon.setFile(file);
             Logger.getGlobal().finest("Parsing dictionary file " + file.getName());
 			FileReader dictionary = new FileReader(filename);
             BufferedReader into = new BufferedReader(dictionary);
@@ -355,7 +357,7 @@ public class Logic {
         Writer output = new FileWriter("/Users/conder/data.txt");
         writeHeader(true, true, dictionary1, dictionary2, "\t", output);
         
-        processFiles(true, true, new File("/Users/conder/Downloads/Coding Files 2/Call Transcripts"), dictionary1, dictionary2, "\t", true, output);
+        processFiles(true, true, new File("/Users/conder/Downloads/Coding Files 2/Call Transcripts"), dictionary1, dictionary2, "\t", true, null, output);
         
        // audit.close();
         output.close();
@@ -369,22 +371,30 @@ public class Logic {
             Lexicon dictionary2, 
             String delimiter, 
             Boolean audit, 
+            MainFrame mf,
             Writer output) {
         for (File file: directory.listFiles()) {
             if (file.isDirectory()) {
-                processFiles(outputCounts, outputDistances, file, dictionary1, dictionary2, delimiter, audit, output);
+                processFiles(outputCounts, outputDistances, file, dictionary1, dictionary2, delimiter, audit, mf, output);
             } else {
                 if (file.getName().endsWith(".txt")) {
                     try {
                         String audit_name = file.getName();
                         audit_name = audit_name.substring(0, audit_name.lastIndexOf("."));
-                        System.out.println("Processing " + file.getPath() + "...");
+
+                        mf.writeToOutput("Processing " + file.getPath() + "...\n");
+
                         dictionary1.reset(); dictionary2.reset();
                         FileWriter auditFile = null;
                         if (audit) {
                             auditFile = new FileWriter(file.getParent() + "/" + audit_name + "_audit.dat");
                             dictionary1.audit = auditFile; dictionary2.audit = auditFile;
+                            auditFile.write("FORMAT FOR WORD MATCHES:\n");
+                            auditFile.write("[Line Number],[Word Number]:WORD MATCH,[PRE|POST-ANALYST|POST-COMPANY],[word found],[stem],[Dictionary]:[category]\n");
+                            auditFile.write("\nFORMAT FOR DISTANCE MATCHES:\n");
+                            auditFile.write("[Line Number]:DISTANCE MATCH,[PRE|POST-ANALYST|POST-COMPANY],[Dictionary 2 Word],[Dictionary 2 Word Number],[Dictionary 1 Word],[Dictionary 1 Word Number],[Number of words between],[Dictionary 2]:[category]\n\n");
                         }
+                        
                         processFile(outputCounts, outputDistances, dictionary1, dictionary2, file, delimiter, output);
                         if (audit) auditFile.close();
                     } catch (IOException ioe) {
@@ -394,7 +404,7 @@ public class Logic {
             }
         }
     }
-    
+       
     public void writeHeader(
             Boolean outputCounts,
             Boolean outputDistances,
@@ -517,8 +527,11 @@ public class Logic {
                 String name = "";
                 String title = "";
                 
-                if (line.contains(":")) {
-                    String[] pieces = line.split(":");
+                // There is a problem where some lines have ":" in them
+                // especially <sync time="01:26:12"/>
+                line = line.replaceAll("<[^>]+>", "");
+                if (line.contains(": ")) {
+                    String[] pieces = line.split(": ");
                     if (pieces.length > 0) {
                         name = pieces[0];
                         if (name.contains(",")) {
@@ -746,10 +759,10 @@ public class Logic {
         readerx.close();
         
         if (dictionary1.audit != null) {
-            dictionary1.audit.write("COMPANY REPRESENTATIVES\n");
+            dictionary1.audit.write("\nCOMPANY REPRESENTATIVES\n");
             dictionary1.audit.write(companyReps.toString());
             dictionary1.audit.write("\n");
-            dictionary1.audit.write("ANALYSTS\n");
+            dictionary1.audit.write("\nANALYSTS\n");
             dictionary1.audit.write(analysts.toString());
             dictionary1.audit.write("\n");
         }

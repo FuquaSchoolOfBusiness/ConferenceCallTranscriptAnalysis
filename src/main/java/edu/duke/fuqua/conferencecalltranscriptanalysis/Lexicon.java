@@ -5,16 +5,15 @@
  */
 package edu.duke.fuqua.conferencecalltranscriptanalysis;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -30,6 +29,11 @@ import java.util.logging.Logger;
  * @author conder
  */
 public class Lexicon extends LinkedList {
+    
+    File file;
+    
+    public void setFile(File f) { this.file = f; }
+    public File getFile() { return this.file; }
     
     // Excluded words
     public List<String> exclusions = new ArrayList<>();
@@ -138,6 +142,8 @@ public class Lexicon extends LinkedList {
                 audit.write(",");
                 audit.write(key.getTerm());
                 audit.write(",");
+                audit.write(this.getFile() == null ? "": this.getFile().getName());
+                audit.write(":");
                 audit.write(key.getCategory());
                 audit.write("\n");
             } catch (IOException ex) {
@@ -167,62 +173,66 @@ public class Lexicon extends LinkedList {
         // word1 and word2.  
         
         for (Match relation: wordRelations) {
-            /*if (match.line_number == 299) {
-                System.out.println(
-                        match.getWord()+ " (" + 
-                                match.getWord_number() + 
-                                ") relation " + 
-                                relation.getWord() + 
-                                " (" + 
-                                relation.getWord_number() + 
-                                ") " +
-                                relation.line_number +
-                                (match.line_number.equals(relation.line_number)) +
-                                Math.abs(match.word_number - relation.word_number) +
-                                Utility.sameSentence(match.word_number, relation.word_number, line)
-            }*/
+            
             if (match.line_number.equals(relation.line_number) &&
-                    !match.word_number.equals(relation.word_number) &&
-                    Math.abs(match.word_number - relation.word_number) < (distanceBetweenWords + 2) &&
-                    Utility.sameSentence(match.word_number, relation.word_number, line)) {
+                    !match.word_number.equals(relation.word_number)) { // &&
+                    //Math.abs(match.word_number - relation.word_number) < (distanceBetweenWords + 2) &&
+                    //Utility.sameSentence(match.word_number, relation.word_number, line)) {
                 
-                String the_type = match.getType() == TYPE_PRE ? 
-                        "PRE": match.getType() == TYPE_POST_ANALYST ? "POST_ANALYST": "POST_COMPANY";
+                Integer relationWordNumber = relation.word_number;
+                Integer matchWordNumber = match.word_number;
                 
-                if (distanceCounters.containsKey(the_type + "_" + match.getTerm().getCategory())) {
-                    Integer cc = distanceCounters.get(the_type + "_" + match.getTerm().getCategory());
-                    cc++;
-                    distanceCounters.put(
-                        the_type + "_" + match.getTerm().getCategory(), cc);
+                // Is the match word on the left of relation word?
+                if (matchWordNumber < relationWordNumber) {
+                    if (match.isPhrase()) matchWordNumber = match.getWord_number_end();
                 } else {
-                    distanceCounters.put(
-                        the_type + "_" + match.getTerm().getCategory(), 
-                        new Integer(1));
+                    if (relation.isPhrase()) relationWordNumber = relation.getWord_number_end();
                 }
                 
-                try {
-                    if (audit != null){
-                    audit.write(String.valueOf(match.getLine_number()));
-                    audit.write(":");
-                    audit.write("DISTANCE MATCH,");
-                    audit.write(match.getType() == TYPE_PRE ? 
-                            "PRE": match.getType() == TYPE_POST_ANALYST ? "POST_ANALYST": "POST_COMPANY");
-                    audit.write(",");
-                    audit.write(match.getWord());
-                    audit.write(",");
-                    audit.write(String.valueOf(match.getWord_number()));
-                    audit.write(",");
-                    audit.write(relation.getWord());
-                    audit.write(",");
-                    audit.write(String.valueOf(relation.getWord_number()));
-                    audit.write(",");
-                    audit.write(String.valueOf(Math.abs(match.getWord_number() - relation.getWord_number()) - 1));
-                    audit.write(",");
-                    audit.write(match.getTerm().getCategory());
-                    audit.write("\n");
+                if (Math.abs(matchWordNumber - relationWordNumber) < (distanceBetweenWords + 2) &&
+                    Utility.sameSentence(matchWordNumber, relationWordNumber, line)) {
+                
+                    String the_type = match.getType() == TYPE_PRE ? 
+                        "PRE": match.getType() == TYPE_POST_ANALYST ? "POST_ANALYST": "POST_COMPANY";
+                
+                    if (distanceCounters.containsKey(the_type + "_" + match.getTerm().getCategory())) {
+                        Integer cc = distanceCounters.get(the_type + "_" + match.getTerm().getCategory());
+                        cc++;
+                        distanceCounters.put(
+                            the_type + "_" + match.getTerm().getCategory(), cc);
+                    } else {
+                        distanceCounters.put(
+                            the_type + "_" + match.getTerm().getCategory(), 
+                            new Integer(1));
                     }
-                } catch (IOException io) {
+                
+                    try {
+                        if (audit != null){
+                            audit.write(String.valueOf(match.getLine_number()));
+                            audit.write(":");
+                            audit.write("DISTANCE MATCH,");
+                            audit.write(match.getType() == TYPE_PRE ? 
+                                "PRE": match.getType() == TYPE_POST_ANALYST ? "POST_ANALYST": "POST_COMPANY");
+                            audit.write(",");
+                            audit.write(match.getWord());
+                            audit.write(",");
+                            audit.write(String.valueOf(matchWordNumber));
+                            audit.write(",");
+                            audit.write(relation.getWord());
+                            audit.write(",");
+                            audit.write(String.valueOf(relationWordNumber));
+                            audit.write(",");
+                            audit.write(String.valueOf(Math.abs(matchWordNumber - relationWordNumber) - 1));
+                            audit.write(",");
+                            audit.write(this.getFile() == null ? "": this.getFile().getName());
+                            audit.write(":");
+                            audit.write(match.getTerm().getCategory());
+                            audit.write("\n");
+                        }
+                    } catch (IOException io) {
                     
+                    }
+                
                 }
                 
             }
@@ -237,25 +247,58 @@ public class Lexicon extends LinkedList {
         String[] wordsInLine = Utility.splitAndMaskWordsAroundNot(line);
         
         // Handle phrases differently than words
+        // Changing algorithm to look for phrases based on parsed words...
+        // use the last word number found for phrase for use in counting
+        // distances between word phrases and words.
         Iterator<Term> terms = this.iterator();
         while (terms.hasNext()) {
             Term term = terms.next();
-            String nLine = line;
             if (Utility.isPhrase(term.getTerm())) {
-                int index = 0;
-				while (index >= 0) {
-					index = nLine.indexOf(term.getTerm());
-					if (index >= 0) {
-                        if (type == TYPE_PRE) {
-                            incrementCountCategories(type, nLine, term, preCountCategoryWords, line_number, null);
-                        } else if (type == TYPE_POST_ANALYST) {
-                            incrementCountCategories(type, nLine, term, postCountCategoryAnalystWords, line_number, null);
-                        } else if (type == TYPE_POST_COMPANY) {
-                            incrementCountCategories(type, nLine, term, postCountCategoryCompanyWords, line_number, null);
+                if (line.contains(term.getTerm())) {
+                    // line has phrase.. now check out matches
+                    String[] parts = term.getTerm().split(" ");
+                    for (int word_count = 0; word_count < wordsInLine.length; word_count++ ) {
+                        if (parts.length > 0 && wordsInLine[word_count].equalsIgnoreCase(parts[0])) {
+                            Boolean matched = true;
+                            // match on first word of phrase.. check for phrase
+                            if (!matched && wordsInLine.length - word_count > parts.length - 1) {
+                                for (int parts_count = 0; parts_count < parts.length; parts_count++) {
+                                    if (!parts[parts_count].equalsIgnoreCase(wordsInLine[word_count + parts_count])) {
+                                        matched = false;
+                                    }
+                                }
+                            }
+                            if (matched) {
+                                
+                                if (type == TYPE_PRE) {
+                                    incrementCountCategories(type, line, term, preCountCategoryWords, line_number, word_count);
+                                } else if (type == TYPE_POST_ANALYST) {
+                                    incrementCountCategories(type, line, term, postCountCategoryAnalystWords, line_number, word_count);
+                                } else if (type == TYPE_POST_COMPANY) {
+                                    incrementCountCategories(type, line, term, postCountCategoryCompanyWords, line_number, word_count);
+                                }
+                                
+                                Match match = new Match();
+                                match.setLine_number(line_number);
+                                match.setWord_number(word_count);               // if match is on left side of phrase
+                                match.setWord_number_end(                       // use first word of phrase, else use
+                                        word_count + parts.length - 1);             // right side of phrase... won't know  
+                                                                                // this until comparing matches... so
+                                                                                // will need to store BOTH.
+                                match.setWord(term.getTerm());
+                                match.setTerm(term);
+                                match.setType(type);
+                                matches.add(match);  
+                                
+                                if (wordRelations != null) {
+                                    checkWordRelations(match, wordRelations, line);
+                                }
+                            }
+                            
                         }
-						nLine = nLine.substring(index + term.getTerm().length());
-					}
-				}                
+                    }
+                }
+                                
             } 
         }
         
@@ -299,7 +342,6 @@ public class Lexicon extends LinkedList {
                         match.setType(type);
                         matches.add(match);
                         
-         //if (line_number == 299) System.out.println("LINE 299: " + match.getWord_number() + " " + match.getWord());
                         if (wordRelations != null) {
                             checkWordRelations(match, wordRelations, line);
                         }

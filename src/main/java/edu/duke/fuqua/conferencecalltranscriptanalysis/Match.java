@@ -16,6 +16,7 @@ public class Match {
     public String word;
     public Term term;
     public Integer word_number;
+    public Integer word_number_end;
     public Integer line_number;
     public Integer type;
     
@@ -25,9 +26,12 @@ public class Match {
     public void setTerm(Term term) { this.term = term; }
     public Integer getWord_number() { return this.word_number; }
     public void setWord_number(Integer number) { this.word_number = number; }
+    public Integer getWord_number_end() { return this.word_number_end == null ? this.getWord_number(): this.word_number_end; };
+    public void setWord_number_end(Integer number) { this.word_number_end = number; }
     public Integer getLine_number() { return this.line_number; }
     public void setLine_number(Integer number) { this.line_number = number; } 
     public Integer getType() { return this.type; }
     public void setType(Integer type) { this.type = type; }
+    public Boolean isPhrase() { return !(this.getWord_number() == this.getWord_number_end()); }
     
 }

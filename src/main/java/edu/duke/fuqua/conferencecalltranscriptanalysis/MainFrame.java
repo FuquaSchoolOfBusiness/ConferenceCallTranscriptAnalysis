@@ -6,13 +6,18 @@
 package edu.duke.fuqua.conferencecalltranscriptanalysis;
 
 import java.awt.Color;
+import java.awt.Window;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 
 /**
  *
@@ -46,7 +51,6 @@ public class MainFrame extends javax.swing.JFrame {
         jMenu6 = new javax.swing.JMenu();
         transcriptDirectoryButton = new javax.swing.JButton();
         auditCheckbox = new javax.swing.JCheckBox();
-        includePhrasesCheckbox = new javax.swing.JCheckBox();
         dictionary1Button = new javax.swing.JButton();
         exclusion1Button = new javax.swing.JButton();
         dictionary2Button = new javax.swing.JButton();
@@ -58,6 +62,7 @@ public class MainFrame extends javax.swing.JFrame {
         runBothButton = new javax.swing.JButton();
         dictionary1Label = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
+        outputDisplay = new javax.swing.JTextArea();
         exclusion1Label = new javax.swing.JLabel();
         dictionary2Label = new javax.swing.JLabel();
         exclusion2Label = new javax.swing.JLabel();
@@ -65,12 +70,10 @@ public class MainFrame extends javax.swing.JFrame {
         header = new javax.swing.JLabel();
         wordDistanceSpinner = new javax.swing.JSpinner();
         wordDistanceLabel = new javax.swing.JLabel();
+        outputFileLocation = new javax.swing.JLabel();
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         quitApplicationMenuItem = new javax.swing.JMenuItem();
-        helpMenu = new javax.swing.JMenu();
-        aboutMenuItem = new javax.swing.JMenuItem();
-        readmeMenuItem = new javax.swing.JMenuItem();
 
         jMenu3.setText("File");
         jMenuBar2.add(jMenu3);
@@ -97,8 +100,6 @@ public class MainFrame extends javax.swing.JFrame {
         });
 
         auditCheckbox.setText("Audit?");
-
-        includePhrasesCheckbox.setText("Include phrases?");
 
         dictionary1Button.setForeground(new java.awt.Color(0, 51, 204));
         dictionary1Button.setText("Choose Dictionary 1");
@@ -174,6 +175,10 @@ public class MainFrame extends javax.swing.JFrame {
         dictionary1Label.setForeground(new java.awt.Color(153, 0, 51));
         dictionary1Label.setText("No file for Dictionary 1 selected.");
 
+        outputDisplay.setColumns(20);
+        outputDisplay.setRows(5);
+        jScrollPane1.setViewportView(outputDisplay);
+
         exclusion1Label.setForeground(new java.awt.Color(153, 0, 51));
         exclusion1Label.setText("No file for Dictionary 1 exclusions selected.");
 
@@ -191,6 +196,8 @@ public class MainFrame extends javax.swing.JFrame {
 
         wordDistanceLabel.setText("Maximum number of words between Dictionary 1 and Dictionary 2 stems?");
 
+        outputFileLocation.setText("Output file location: ");
+
         jMenu1.setText("File");
 
         quitApplicationMenuItem.setText("Quit Application");
@@ -203,22 +210,6 @@ public class MainFrame extends javax.swing.JFrame {
 
         jMenuBar1.add(jMenu1);
 
-        helpMenu.setText("Help");
-
-        aboutMenuItem.setText("About");
-        aboutMenuItem.setToolTipText("");
-        aboutMenuItem.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                aboutMenuItemActionPerformed(evt);
-            }
-        });
-        helpMenu.add(aboutMenuItem);
-
-        readmeMenuItem.setText("ReadMe File");
-        helpMenu.add(readmeMenuItem);
-
-        jMenuBar1.add(helpMenu);
-
         setJMenuBar(jMenuBar1);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -226,14 +217,20 @@ public class MainFrame extends javax.swing.JFrame {
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addContainerGap()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(layout.createSequentialGroup()
-                                .addComponent(dictionary2Button)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(exclusion2Button))
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addComponent(dictionary2Button)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(exclusion2Button))
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addGap(14, 14, 14)
+                                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 653, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addGap(0, 6, Short.MAX_VALUE))
                             .addGroup(layout.createSequentialGroup()
                                 .addGap(6, 6, 6)
                                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -243,18 +240,9 @@ public class MainFrame extends javax.swing.JFrame {
                                         .addComponent(wordDistanceSpinner, javax.swing.GroupLayout.PREFERRED_SIZE, 48, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                         .addComponent(wordDistanceLabel)
-                                        .addGap(0, 0, Short.MAX_VALUE))))))
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(14, 14, 14)
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 603, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
-                        .addComponent(transcriptDirectoryLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 614, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap())
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addGap(0, 0, Short.MAX_VALUE))
+                                    .addComponent(transcriptDirectoryLabel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                        .addContainerGap())
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(header, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addContainerGap())
@@ -266,21 +254,12 @@ public class MainFrame extends javax.swing.JFrame {
                                 .addComponent(exclusion1Button)
                                 .addGap(0, 0, Short.MAX_VALUE))
                             .addGroup(layout.createSequentialGroup()
-                                .addComponent(runWordCountsButton, javax.swing.GroupLayout.PREFERRED_SIZE, 238, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(runWordCountsButton, javax.swing.GroupLayout.PREFERRED_SIZE, 226, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(runDistanceCountsButton, javax.swing.GroupLayout.PREFERRED_SIZE, 186, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addComponent(runBothButton, javax.swing.GroupLayout.PREFERRED_SIZE, 186, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addComponent(runDistanceCountsButton, javax.swing.GroupLayout.PREFERRED_SIZE, 219, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(runBothButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                         .addContainerGap())
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addComponent(commaSeparatedValuesButton)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(tabSeparatedValuesRadioButton)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(includePhrasesCheckbox)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(auditCheckbox)
-                        .addGap(14, 14, 14))
                     .addGroup(layout.createSequentialGroup()
                         .addGap(6, 6, 6)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -288,7 +267,19 @@ public class MainFrame extends javax.swing.JFrame {
                             .addComponent(exclusion1Label, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(transcriptDirectoryButton)
-                        .addGap(0, 0, Short.MAX_VALUE))))
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(0, 0, Short.MAX_VALUE)
+                                .addComponent(outputFileLocation, javax.swing.GroupLayout.PREFERRED_SIZE, 655, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(commaSeparatedValuesButton)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(tabSeparatedValuesRadioButton)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(auditCheckbox)))
+                        .addGap(14, 14, 14))))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -322,15 +313,16 @@ public class MainFrame extends javax.swing.JFrame {
                 .addGap(7, 7, 7)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(auditCheckbox)
-                    .addComponent(includePhrasesCheckbox)
                     .addComponent(commaSeparatedValuesButton)
                     .addComponent(tabSeparatedValuesRadioButton))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(outputFileLocation, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(runWordCountsButton)
                     .addComponent(runDistanceCountsButton)
                     .addComponent(runBothButton))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 234, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
@@ -400,18 +392,23 @@ public class MainFrame extends javax.swing.JFrame {
 
     Integer word_distance = 3;
     private void runDistanceCountsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_runDistanceCountsButtonActionPerformed
-        this.runOutput(false, true);
-    }//GEN-LAST:event_runDistanceCountsButtonActionPerformed
 
-    private void aboutMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_aboutMenuItemActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_aboutMenuItemActionPerformed
+                runOutput(false, true);
+
+    }//GEN-LAST:event_runDistanceCountsButtonActionPerformed
 
     private void quitApplicationMenuItemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_quitApplicationMenuItemActionPerformed
         System.exit(0);
     }//GEN-LAST:event_quitApplicationMenuItemActionPerformed
 
     private void runOutput(Boolean outputCounts, Boolean outputDistances) {
+        
+SwingWorker worker = new SwingWorker<Void, Void>() {
+    @Override
+    public Void doInBackground() {
+        
+ Date started = new java.util.Date();
+        outputDisplay.setText("Started processing files at " + (started) + ".\n");
         Logic logic = new Logic();
         Lexicon dictionary1 = null;
         Lexicon dictionary2 = null;
@@ -420,59 +417,89 @@ public class MainFrame extends javax.swing.JFrame {
         try {
       
             // Load dictionary 1
-            dictionary1 = logic.parseDictionaryFromFile(this.dictionary1File);
-            dictionary1.distanceBetweenWords = (Integer) this.wordDistanceSpinner.getValue();
-            if (this.exclusion1File != null && dictionary1 != null) 
+            dictionary1 = logic.parseDictionaryFromFile(dictionary1File);
+            dictionary1.distanceBetweenWords = (Integer) wordDistanceSpinner.getValue();
+            if (exclusion1File != null && dictionary1 != null) 
                 try {
-                    dictionary1.exclusions = logic.loadExclusionWords(this.exclusion1File);
+                    dictionary1.exclusions = logic.loadExclusionWords(exclusion1File);
                 } catch (IOException ex) {
                     Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
                 }
 
             // Load dictionary 2
-            dictionary2 = logic.parseDictionaryFromFile(this.dictionary2File);
-            dictionary2.distanceBetweenWords = (Integer) this.wordDistanceSpinner.getValue();
-            if (this.exclusion2File != null && dictionary2 != null) 
+            dictionary2 = logic.parseDictionaryFromFile(dictionary2File);
+            dictionary2.distanceBetweenWords = (Integer) wordDistanceSpinner.getValue();
+            if (exclusion2File != null && dictionary2 != null) 
                 try {
-                    dictionary2.exclusions = logic.loadExclusionWords(this.exclusion2File);
+                    dictionary2.exclusions = logic.loadExclusionWords(exclusion2File);
                 } catch (IOException ex) {
                     Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
                 }
         
-            output = new FileWriter("data.txt");
+            File outfile = new File("data.txt");
+            output = new FileWriter(outfile);
+            
+            outputFileLocation.setText("Output file location: " + outfile.getAbsolutePath());
             
             logic.writeHeader(
                     outputCounts,
                     outputDistances,
                     dictionary1, 
                     dictionary2, 
-                    this.commaSeparatedValuesButton.isSelected() ? ",": "\t",
+                    commaSeparatedValuesButton.isSelected() ? ",": "\t",
                     output);
             
             logic.processFiles(
                     outputCounts,
                     outputDistances,
-                    this.transcriptLocationFile, 
+                    transcriptLocationFile, 
                     dictionary1, 
                     dictionary2,
-                    this.commaSeparatedValuesButton.isSelected() ? ",": "\t",
-                    this.auditCheckbox.isSelected(),
+                    commaSeparatedValuesButton.isSelected() ? ",": "\t",
+                    auditCheckbox.isSelected(),
+                    MainFrame.this,
                     output);
         
             output.close();
             
+            Date finished = new java.util.Date();
+            
+            MainFrame.this.writeToOutput("Finished processing files at " + (finished) + ".\n");
+            MainFrame.this.writeToOutput("Total processing time: " + (finished.getTime() - started.getTime()) + "ms\n");
+        
+            JOptionPane.showMessageDialog(MainFrame.this, "Finished processing files.");
+        
         } catch (IOException ex) {
             Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
-        }        
+            
+            JOptionPane.showMessageDialog(MainFrame.this, "Error when processing files.", "Error", JOptionPane.ERROR_MESSAGE);
+        }         
+        
+        return null;
+    }
+};        
+        
+        worker.execute();
+        
+        
     }
     private void runWordCountsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_runWordCountsButtonActionPerformed
-       this.runOutput(true, false);
+
+                runOutput(true, false);
+
     }//GEN-LAST:event_runWordCountsButtonActionPerformed
 
     private void runBothButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_runBothButtonActionPerformed
-        this.runOutput(true, true);
+
+                runOutput(true, true);
+ 
     }//GEN-LAST:event_runBothButtonActionPerformed
 
+    public void writeToOutput(String text) {
+        this.outputDisplay.append(text);
+        this.revalidate();
+    }
+    
     /**
      * @param args the command line arguments
      */
@@ -509,7 +536,6 @@ public class MainFrame extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JMenuItem aboutMenuItem;
     private javax.swing.JCheckBox auditCheckbox;
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.JRadioButton commaSeparatedValuesButton;
@@ -522,8 +548,6 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JButton exclusion2Button;
     private javax.swing.JLabel exclusion2Label;
     private javax.swing.JLabel header;
-    private javax.swing.JMenu helpMenu;
-    private javax.swing.JCheckBox includePhrasesCheckbox;
     private javax.swing.JMenu jMenu1;
     private javax.swing.JMenu jMenu3;
     private javax.swing.JMenu jMenu4;
@@ -533,8 +557,9 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JMenuBar jMenuBar2;
     private javax.swing.JMenuBar jMenuBar3;
     private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JTextArea outputDisplay;
+    private javax.swing.JLabel outputFileLocation;
     private javax.swing.JMenuItem quitApplicationMenuItem;
-    private javax.swing.JMenuItem readmeMenuItem;
     private javax.swing.JButton runBothButton;
     private javax.swing.JButton runDistanceCountsButton;
     private javax.swing.JButton runWordCountsButton;
