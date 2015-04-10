@@ -9,7 +9,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Term is a component of a Lexicon.
+ * Term is a component of a Dictionary.
  * It can have up to one category.
  * It also has a sort order.
  * Terms may much multiple words, but 

@@ -176,8 +176,6 @@ public class Dictionary extends LinkedList {
             
             if (match.line_number.equals(relation.line_number) &&
                     !match.word_number.equals(relation.word_number)) { // &&
-                    //Math.abs(match.word_number - relation.word_number) < (distanceBetweenWords + 2) &&
-                    //Utility.sameSentence(match.word_number, relation.word_number, line)) {
                 
                 Integer relationWordNumber = relation.word_number;
                 Integer matchWordNumber = match.word_number;

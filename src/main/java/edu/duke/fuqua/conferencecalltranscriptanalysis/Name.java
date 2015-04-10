@@ -6,7 +6,7 @@
 package edu.duke.fuqua.conferencecalltranscriptanalysis;
 
 /**
- *
+ * Name is a class to track Company Reps and Analysts.
  * @author conder
  */
 public class Name {
