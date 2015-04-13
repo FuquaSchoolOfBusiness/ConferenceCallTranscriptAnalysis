@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeMap;
@@ -357,7 +358,10 @@ public class Logic {
             Boolean audit, 
             MainFrame mf,
             Writer output) {
-        for (File file: directory.listFiles()) {
+        
+        List<File> fileList = Arrays.asList(directory.listFiles());
+        fileList.stream().parallel().forEach(
+                (file) -> { 
             if (file.isDirectory()) {
                 processFiles(outputCounts, outputDistances, file, dictionary1, dictionary2, delimiter, audit, mf, output);
             } else {
@@ -368,26 +372,31 @@ public class Logic {
 
                         mf.writeToOutput("Processing " + file.getPath() + "...\n");
 
-                        dictionary1.reset(); dictionary2.reset();
+                        Counter counter1 = new Counter();
+                        Counter counter2 = new Counter();
+                        
+                        //dictionary1.reset(); dictionary2.reset();
                         FileWriter auditFile = null;
                         if (audit) {
                             auditFile = new FileWriter(file.getParent() + "/" + audit_name + "_audit.dat");
-                            dictionary1.audit = auditFile; dictionary2.audit = auditFile;
+                            counter1.audit = auditFile; counter2.audit = auditFile;
                             auditFile.write("FORMAT FOR WORD MATCHES:\n");
                             auditFile.write("[Line Number],[Word Number]:WORD MATCH,[PRE|POST-ANALYST|POST-COMPANY],[word found],[stem],[Dictionary]:[category]\n");
                             auditFile.write("\nFORMAT FOR DISTANCE MATCHES:\n");
                             auditFile.write("[Line Number]:DISTANCE MATCH,[PRE|POST-ANALYST|POST-COMPANY],[Dictionary 2 Word],[Dictionary 2 Word Number],[Dictionary 1 Word],[Dictionary 1 Word Number],[Number of words between],[Dictionary 2]:[category]\n\n");
                         }
                         
-                        processFile(outputCounts, outputDistances, dictionary1, dictionary2, file, delimiter, output);
+                        processFile(outputCounts, outputDistances, dictionary1, dictionary2, counter1, counter2, file, delimiter, output);
                         if (audit) auditFile.close();
                     } catch (IOException ioe) {
                         
                     }
                 }
             }
-        }
-    }
+                });
+                            
+        
+    };
        
     public void writeHeader(
             Boolean outputCounts,
@@ -460,6 +469,8 @@ public class Logic {
             Boolean outputDistances,
             Dictionary dictionary1, 
             Dictionary dictionary2, 
+            Counter counter1,
+            Counter counter2,
             File transcript, 
             String delimiter,
             Writer output) throws IOException {
@@ -505,8 +516,8 @@ public class Logic {
             if (line.contains("QUESTION AND ANSWER")) {
                 pre_mode = false;
 			} else if (pre_mode) {
-                List<Match> matches = dictionary1.countWords(line, Dictionary.TYPE_PRE, line_number, null);
-                dictionary2.countWords(line, Dictionary.TYPE_PRE, line_number, matches);
+                List<Match> matches = counter1.countWords(line, Counter.TYPE_PRE, line_number, null);
+                counter2.countWords(line, Counter.TYPE_PRE, line_number, matches);
 			} else {
                 String name = "";
                 String title = "";
@@ -638,11 +649,11 @@ public class Logic {
         
         for (Name name: lines) {
             if (name.getType() == Name.TYPE_COMPANY_REP) { 
-                List<Match> matches = dictionary1.countWords(name.getLine(), Dictionary.TYPE_POST_COMPANY, name.getNumber(), null);
-                dictionary2.countWords(name.getLine(), Dictionary.TYPE_POST_COMPANY, name.getNumber(), matches);
+                List<Match> matches = counter1.countWords(name.getLine(), Counter.TYPE_POST_COMPANY, name.getNumber(), null);
+                counter2.countWords(name.getLine(), Counter.TYPE_POST_COMPANY, name.getNumber(), matches);
             } else if (name.getType() == Name.TYPE_ANALYST) {
-                List<Match> matches = dictionary1.countWords(name.getLine(), Dictionary.TYPE_POST_ANALYST, name.getNumber(), null);
-                dictionary2.countWords(name.getLine(), Dictionary.TYPE_POST_ANALYST, name.getNumber(), matches);
+                List<Match> matches = counter1.countWords(name.getLine(), Counter.TYPE_POST_ANALYST, name.getNumber(), null);
+                counter2.countWords(name.getLine(), Counter.TYPE_POST_ANALYST, name.getNumber(), matches);
             }
         }
         
@@ -657,59 +668,59 @@ public class Logic {
         output.write( delimiter );
         
         // PRE VALUES
-        output.write(String.valueOf(dictionary1.preCountAllWords));// +":" + dictionary2.preCountAllWords);
+        output.write(String.valueOf(counter1.preCountAllWords));// +":" + dictionary2.preCountAllWords);
         if (outputCounts) {
         for (String category: dictionary1.getCategories()) {
             output.write(delimiter);
             output.write(
-                    dictionary1.preCountCategoryWords.get(category) == null ? "0":
-                        String.valueOf(dictionary1.preCountCategoryWords.get(category))
+                    counter1.preCountCategoryWords.get(category) == null ? "0":
+                        String.valueOf(counter1.preCountCategoryWords.get(category))
             );  
         }
         for (String category: dictionary2.getCategories()) {
             output.write(delimiter);
             output.write(
-                    dictionary2.preCountCategoryWords.get(category) == null ? "0":
-                        String.valueOf(dictionary2.preCountCategoryWords.get(category))
+                    counter2.preCountCategoryWords.get(category) == null ? "0":
+                        String.valueOf(counter2.preCountCategoryWords.get(category))
             ); 
         }
         }
         output.write(delimiter);
-        output.write(String.valueOf(dictionary1.postCountAllCompanyWords + dictionary1.postCountAllAnalystWords));// + ":" + (dictionary2.postCountAllCompanyWords + dictionary2.postCountAllAnalystWords));
+        output.write(String.valueOf(counter1.postCountAllCompanyWords + counter1.postCountAllAnalystWords));// + ":" + (dictionary2.postCountAllCompanyWords + dictionary2.postCountAllAnalystWords));
         output.write(delimiter);
-        output.write(String.valueOf(dictionary1.postCountAllCompanyWords));// +":" + dictionary2.postCountAllCompanyWords);
+        output.write(String.valueOf(counter1.postCountAllCompanyWords));// +":" + dictionary2.postCountAllCompanyWords);
         output.write(delimiter);
-        output.write(String.valueOf(dictionary1.postCountAllAnalystWords));// +":" + dictionary2.postCountAllAnalystWords);
+        output.write(String.valueOf(counter1.postCountAllAnalystWords));// +":" + dictionary2.postCountAllAnalystWords);
         
         // POST COMPANY VALUES
         if (outputCounts) {
         for (String category: dictionary1.getCategories()) {
             output.write(delimiter);
             output.write(
-                    dictionary1.postCountCategoryCompanyWords.get(category) == null ? "0":
-                    String.valueOf(dictionary1.postCountCategoryCompanyWords.get(category))
+                    counter1.postCountCategoryCompanyWords.get(category) == null ? "0":
+                    String.valueOf(counter1.postCountCategoryCompanyWords.get(category))
             ); 
         }
         for (String category: dictionary2.getCategories()) {
             output.write(delimiter);
             output.write(
-                    dictionary2.postCountCategoryCompanyWords.get(category) == null ? "0":
-                    String.valueOf(dictionary2.postCountCategoryCompanyWords.get(category))
+                    counter2.postCountCategoryCompanyWords.get(category) == null ? "0":
+                    String.valueOf(counter2.postCountCategoryCompanyWords.get(category))
             ); 
         }
         // POST ANALYST VALUES
         for (String category: dictionary1.getCategories()) {
             output.write(delimiter);
             output.write(
-                    dictionary1.postCountCategoryAnalystWords.get(category) == null ? "0":
-                    String.valueOf(dictionary1.postCountCategoryAnalystWords.get(category))
+                    counter1.postCountCategoryAnalystWords.get(category) == null ? "0":
+                    String.valueOf(counter1.postCountCategoryAnalystWords.get(category))
             );
         }
         for (String category: dictionary2.getCategories()) {
             output.write(delimiter);
             output.write(
-                    dictionary2.postCountCategoryAnalystWords.get(category) == null ? "0":
-                    String.valueOf(dictionary2.postCountCategoryAnalystWords.get(category))
+                    counter2.postCountCategoryAnalystWords.get(category) == null ? "0":
+                    String.valueOf(counter2.postCountCategoryAnalystWords.get(category))
             ); 
         }           
         }
@@ -719,22 +730,22 @@ public class Logic {
         for (String category: dictionary2.getCategories()) {
             output.write(delimiter);
             output.write(
-                    dictionary2.distanceCounters.get("PRE_" + category) == null ? "0":
-                            String.valueOf(dictionary2.distanceCounters.get("PRE_" + category))
+                    counter2.distanceCounters.get("PRE_" + category) == null ? "0":
+                            String.valueOf(counter2.distanceCounters.get("PRE_" + category))
             ); 
         }
         for (String category: dictionary2.getCategories()) {
             output.write(delimiter);
             output.write(
-                    dictionary2.distanceCounters.get("POST_COMPANY_" + category) == null ? "0":
-                            String.valueOf(dictionary2.distanceCounters.get("POST_COMPANY_" + category))
+                    counter2.distanceCounters.get("POST_COMPANY_" + category) == null ? "0":
+                            String.valueOf(counter2.distanceCounters.get("POST_COMPANY_" + category))
             ); 
         }
         for (String category: dictionary2.getCategories()) {
             output.write(delimiter);
             output.write(
-                    dictionary2.distanceCounters.get("POST_ANALYST_" + category) == null ? "0":
-                            String.valueOf(dictionary2.distanceCounters.get("POST_ANALYST_" + category))
+                    counter2.distanceCounters.get("POST_ANALYST_" + category) == null ? "0":
+                            String.valueOf(counter2.distanceCounters.get("POST_ANALYST_" + category))
             ); 
         }
         }
@@ -742,13 +753,13 @@ public class Logic {
         
         readerx.close();
         
-        if (dictionary1.audit != null) {
-            dictionary1.audit.write("\nCOMPANY REPRESENTATIVES\n");
-            dictionary1.audit.write(companyReps.toString());
-            dictionary1.audit.write("\n");
-            dictionary1.audit.write("\nANALYSTS\n");
-            dictionary1.audit.write(analysts.toString());
-            dictionary1.audit.write("\n");
+        if (counter1.audit != null) {
+            counter1.audit.write("\nCOMPANY REPRESENTATIVES\n");
+            counter1.audit.write(companyReps.toString());
+            counter1.audit.write("\n");
+            counter1.audit.write("\nANALYSTS\n");
+            counter1.audit.write(analysts.toString());
+            counter1.audit.write("\n");
         }
         
               
