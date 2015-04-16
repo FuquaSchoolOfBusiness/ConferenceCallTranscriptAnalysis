@@ -37,7 +37,7 @@ public class Dictionary extends LinkedList {
     public File getFile() { return this.file; }
     
     // Excluded words
-    public List<String> exclusions = new ArrayList<>();
+    public ArrayList<String> exclusions = new ArrayList<>();
     
     // Categories of terms
     public Boolean contains(String termString) {
@@ -76,4 +76,17 @@ public class Dictionary extends LinkedList {
         return categories;
     }
     
+    public Object clone() { 
+        
+        Dictionary d = new Dictionary();
+        d.distanceBetweenWords = this.distanceBetweenWords;
+        d.file = this.getFile();
+        d.exclusions = (ArrayList)this.exclusions.clone();
+        Iterator it = this.iterator();
+        while (it.hasNext()) {
+            Term term = (Term)it.next();
+            d.add(term.clone());
+        }
+        return d;
+    }
 }

@@ -345,7 +345,7 @@ public class Logic {
         processFiles(true, true, new File("/Users/conder/Downloads/Coding Files 2/Call Transcripts"), dictionary1, dictionary2, "\t", true, null, output);
         
        // audit.close();
-        output.close();
+       // output.close();
     }
     
     public void processFiles(
@@ -363,7 +363,15 @@ public class Logic {
         fileList.stream().parallel().forEach(
                 (file) -> { 
             if (file.isDirectory()) {
-                processFiles(outputCounts, outputDistances, file, dictionary1, dictionary2, delimiter, audit, mf, output);
+                processFiles(outputCounts, 
+                        outputDistances, 
+                        file, 
+                        (Dictionary)dictionary1.clone(), 
+                        (Dictionary)dictionary2.clone(), 
+                        delimiter, 
+                        audit, 
+                        mf, 
+                        output);
             } else {
                 if (file.getName().endsWith(".txt")) {
                     try {
@@ -386,10 +394,19 @@ public class Logic {
                             auditFile.write("[Line Number]:DISTANCE MATCH,[PRE|POST-ANALYST|POST-COMPANY],[Dictionary 2 Word],[Dictionary 2 Word Number],[Dictionary 1 Word],[Dictionary 1 Word Number],[Number of words between],[Dictionary 2]:[category]\n\n");
                         }
                         
-                        processFile(outputCounts, outputDistances, dictionary1, dictionary2, counter1, counter2, file, delimiter, output);
-                        if (audit) auditFile.close();
+                        processFile(
+                                outputCounts, 
+                                outputDistances, 
+                                dictionary1, 
+                                dictionary2, 
+                                counter1, 
+                                counter2, 
+                                file, 
+                                delimiter, 
+                                output);
+                        try { auditFile.close(); } catch (Throwable _t) { }
                     } catch (IOException ioe) {
-                        
+                        ioe.printStackTrace();
                     }
                 }
             }
@@ -475,6 +492,8 @@ public class Logic {
             String delimiter,
             Writer output) throws IOException {
         
+        Logic log = new Logic();
+        
         FileReader reader = new FileReader(transcript);
         BufferedReader readerx = new BufferedReader(reader);
 		
@@ -511,7 +530,7 @@ public class Logic {
 			String line = readerx.readLine();
             line_number++;
             if (line_number < 20 && date == null && Logic.isMonth(line)) {
-                date = this.parseLineForDate(line);
+                date = log.parseLineForDate(line);
             }
             if (line.contains("QUESTION AND ANSWER")) {
                 pre_mode = false;
@@ -658,7 +677,7 @@ public class Logic {
         }
         
         // TRANSCRIPT VALUES
-        output.write(company_name);
+/*        output.write(company_name);
         output.write( delimiter );
         output.write(year);
         output.write( delimiter );
@@ -750,7 +769,7 @@ public class Logic {
         }
         }
         output.write("\n");
-        
+  */      
         readerx.close();
         
         if (counter1.audit != null) {
@@ -775,8 +794,8 @@ public class Logic {
         
     }
     
-    public List<String> loadExclusionWords(File path) throws FileNotFoundException, IOException {
-        List<String> list = new ArrayList<>();
+    public ArrayList<String> loadExclusionWords(File path) throws FileNotFoundException, IOException {
+        ArrayList<String> list = new ArrayList<>();
         BufferedReader br = new BufferedReader(new FileReader(path));
         while (br.ready()) {
             String line = br.readLine();

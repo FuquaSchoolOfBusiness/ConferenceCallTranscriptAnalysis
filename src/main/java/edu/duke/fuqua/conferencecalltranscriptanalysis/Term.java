@@ -41,4 +41,11 @@ public class Term {
     
     public String toString() { return this.getTerm(); }
     
+    public Object clone() {
+        Term term = new Term();
+        term.term = this.term;
+        term.category = this.category;
+        term.order = this.order;
+        return term;
+    }
 }
