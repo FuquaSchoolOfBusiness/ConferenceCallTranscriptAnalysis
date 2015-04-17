@@ -495,9 +495,12 @@ public class Logic {
         int line_number = 0;
         int classify = 3;
         String date = null;
+        Boolean pre_speaker_started = false;
         
         while (readerx.ready()) {
 			String line = readerx.readLine();
+            String name = "";
+            String title = "";
             line_number++;
             if (line_number < 20 && date == null && Logic.isMonth(line)) {
                 date = this.parseLineForDate(line);
@@ -505,19 +508,78 @@ public class Logic {
             if (line.contains("QUESTION AND ANSWER")) {
                 pre_mode = false;
 			} else if (pre_mode) {
-                List<Match> matches = dictionary1.countWords(line, Dictionary.TYPE_PRE, line_number, null);
-                dictionary2.countWords(line, Dictionary.TYPE_PRE, line_number, matches);
+                
+                // add names if they show in PRE section...
+                line = line.replaceAll("<[^>]+>", "");
+                // only check if there are more UPPER case letters than
+                // lower case letters in the PRE section because lines
+                // are more likely to have ": " in them and NOT be part 
+                // of a name.
+                if (line.contains(": ")) {
+                    String[] pieces = line.split(": ");
+                    if (pieces.length > 0 && isMoreUpper(pieces[0])) {
+                        name = pieces[0];
+                        // names may have (ph) or something like that
+                        // remove all (..) content...
+                        name = name.replaceAll("\\(.+?\\)","").trim().toUpperCase();
+                        pre_speaker_started = true;
+                        if (name.contains(",")) {
+                            //Split on comma to remove the name's titles
+                            String[] parts = name.split(",");
+                            name = parts[0].trim();
+                            if (parts.length > 1) title = parts[1].trim();
+                        }
+                        if (name.startsWith("OPERATOR")) {
+                            classify = 0; // operator
+                        }
+                        else if (name.toUpperCase().startsWith("[COPYRIGHT")) {
+                            classify = 3; // do nothing
+                        }
+                        else if (name.equals("")) {
+
+                        }
+                        else if (analysts.contains(name) || name.contains("ANALYST") || title.contains("ANALYST")) {
+                            classify = 2;
+                            if (!analysts.contains(name)) analysts.add(name);
+                            logger.fine(name + " pre classified as analyst - case 6");
+                        }
+                        else if (companyReps.contains(name)) { //|| arrayContains(myNames.get(i), name)) {
+                            if (!companyReps.contains(name)) companyReps.add(name);
+                            classify = 1;
+                            logger.fine(name + " pre classified as company rep - case 7");
+                        }
+                        // The operator introduces analysts only in the Q&A section
+                        else if (classify == 0) {
+                        //    classify = 2;
+                        //    if (!analysts.contains(name)) analysts.add(name);
+                        //    logger.fine(name + "classified as analyst - case 8");
+                        }
+                        // If name is listed in company representative array add to
+                        // company statements
+                        else {
+                            if (!companyReps.contains(name)) companyReps.add(name);
+                            classify = 1;
+                            logger.fine(name + " pre classified as company rep - case 10");
+                        }
+                        line = pieces.length > 1 ? pieces[1].trim(): "";
+                    }
+                }
+                if (pre_speaker_started) {
+                    List<Match> matches = dictionary1.countWords(line, Dictionary.TYPE_PRE, line_number, null);
+                    dictionary2.countWords(line, Dictionary.TYPE_PRE, line_number, matches);
+                }
 			} else {
-                String name = "";
-                String title = "";
                 
                 // There is a problem where some lines have ":" in them
                 // especially <sync time="01:26:12"/>
                 line = line.replaceAll("<[^>]+>", "");
-                if (line.contains(": ")) {
-                    String[] pieces = line.split(": ");
+                String[] pieces = line.split(": ");
+                if (line.contains(": ") && pieces.length > 0 && (isMoreUpper(pieces[0]) || pieces[0].length() < 70 )) {
                     if (pieces.length > 0) {
                         name = pieces[0];
+                        // names may have (ph) or something like that
+                        // remove all (..) content...
+                        name = name.replaceAll("\\(.+?\\)","").trim().toUpperCase();
                         if (name.contains(",")) {
                             //Split on comma to remove the name's titles
                             String[] parts = name.split(",");
@@ -636,13 +698,13 @@ public class Logic {
             }
         }
         
-        for (Name name: lines) {
-            if (name.getType() == Name.TYPE_COMPANY_REP) { 
-                List<Match> matches = dictionary1.countWords(name.getLine(), Dictionary.TYPE_POST_COMPANY, name.getNumber(), null);
-                dictionary2.countWords(name.getLine(), Dictionary.TYPE_POST_COMPANY, name.getNumber(), matches);
-            } else if (name.getType() == Name.TYPE_ANALYST) {
-                List<Match> matches = dictionary1.countWords(name.getLine(), Dictionary.TYPE_POST_ANALYST, name.getNumber(), null);
-                dictionary2.countWords(name.getLine(), Dictionary.TYPE_POST_ANALYST, name.getNumber(), matches);
+        for (Name named: lines) {
+            if (named.getType() == Name.TYPE_COMPANY_REP) { 
+                List<Match> matches = dictionary1.countWords(named.getLine(), Dictionary.TYPE_POST_COMPANY, named.getNumber(), null);
+                dictionary2.countWords(named.getLine(), Dictionary.TYPE_POST_COMPANY, named.getNumber(), matches);
+            } else if (named.getType() == Name.TYPE_ANALYST) {
+                List<Match> matches = dictionary1.countWords(named.getLine(), Dictionary.TYPE_POST_ANALYST, named.getNumber(), null);
+                dictionary2.countWords(named.getLine(), Dictionary.TYPE_POST_ANALYST, named.getNumber(), matches);
             }
         }
         
@@ -912,4 +974,16 @@ public class Logic {
 		return false;
 	}
     
+    public Boolean isMoreUpper(String string) {
+        Integer upper = 0;
+        Integer lower = 0;
+        for (int i=0; i<string.length();i++) {
+            if(Character.isUpperCase(string.charAt(i))){
+                upper++;
+            } else {
+                lower++;
+            }
+        }
+        return upper > lower;
+    }
 }
