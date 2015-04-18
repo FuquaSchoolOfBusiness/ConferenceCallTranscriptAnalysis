@@ -517,7 +517,12 @@ public class Logic {
                 // of a name.
                 if (line.contains(": ")) {
                     String[] pieces = line.split(": ");
-                    if (pieces.length > 0 && isMoreUpper(pieces[0])) {
+                    if (pieces.length > 0 && 
+                            (isMoreUpper(pieces[0]) || 
+                              (!hasContraction(pieces[0].trim()) &&
+                              pieces[0].trim().length() < 50)
+                            )
+                        ) {
                         name = pieces[0];
                         // names may have (ph) or something like that
                         // remove all (..) content...
@@ -574,7 +579,12 @@ public class Logic {
                 // especially <sync time="01:26:12"/>
                 line = line.replaceAll("<[^>]+>", "");
                 String[] pieces = line.split(": ");
-                if (line.contains(": ") && pieces.length > 0 && (isMoreUpper(pieces[0]) || pieces[0].length() < 70 )) {
+                if (line.contains(": ") && 
+                        pieces.length > 0 && 
+                        (isMoreUpper(pieces[0]) || 
+                            (!hasContraction(pieces[0].trim()) &&
+                            pieces[0].trim().length() < 50) )
+                        ) {
                     if (pieces.length > 0) {
                         name = pieces[0];
                         // names may have (ph) or something like that
@@ -974,13 +984,44 @@ public class Logic {
 		return false;
 	}
     
+    public Boolean hasContraction(String string) {
+        
+        if (string.toLowerCase().contains(" and ") || 
+                string.toLowerCase().contains(" or ") ||
+                string.toLowerCase().contains(" of ") ||
+                string.toLowerCase().contains(" the ") ||
+                string.toLowerCase().contains(" this ") ||
+                string.toLowerCase().contains(" in ") ||
+                string.toLowerCase().contains(" is ") ||
+                string.toLowerCase().contains(" we ") ||
+                string.toLowerCase().contains(" my ") ||
+                string.toLowerCase().contains(" at ") ||
+                string.toLowerCase().contains(" to ") ||
+                string.toLowerCase().contains(" are ") ||
+                string.toLowerCase().contains(" very ") ||
+                string.toLowerCase().contains(" for ") ||
+                string.toLowerCase().contains(" you ") ||
+                string.toLowerCase().contains(" as ") ||
+                string.toLowerCase().startsWith("the ") ||
+                string.toLowerCase().startsWith("s1. ") ||
+                string.toLowerCase().startsWith("s2. ") ||
+                string.toLowerCase().startsWith("s3. ") ||
+                string.toLowerCase().startsWith("s4. ") ||
+                string.toLowerCase().startsWith("s5. ") ||
+                string.toLowerCase().startsWith("his ") ||
+                string.toLowerCase().startsWith("at "))
+            return true;
+        else
+            return false;
+        
+    }
     public Boolean isMoreUpper(String string) {
         Integer upper = 0;
         Integer lower = 0;
         for (int i=0; i<string.length();i++) {
             if(Character.isUpperCase(string.charAt(i))){
                 upper++;
-            } else {
+            } else if(Character.isLowerCase(string.charAt(i))) {
                 lower++;
             }
         }
