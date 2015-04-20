@@ -15,6 +15,7 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
@@ -329,21 +330,15 @@ public class Logic {
         
         Dictionary dictionary1 = this.parseDictionaryFromFile(new File("/Users/conder/Marketing Dictionary.txt"));
         
-        //Lexicon lex = this.parseDictionaryFromFile(
-        //        new File("/Users/conder/Knowledge Dictionary copy.txt"));
         Dictionary dictionary2 = this.parseDictionaryFromFile(
                 new File("/Users/conder/Knowledge Dictionary.txt"));
         dictionary2.exclusions = this.loadExclusionWords(new File("/Users/conder/Excluded Words.txt"));
-      //  dictionary2.audit = audit; 
-        //dictionary1.exclusions = this.loadExclusionWords("/Users/conder/Excluded Words.txt");
-       // dictionary1.audit = audit;
                 
         Writer output = new FileWriter("/Users/conder/data.txt");
         writeHeader(true, true, dictionary1, dictionary2, "\t", output);
         
         processFiles(true, true, new File("/Users/conder/Downloads/Coding Files 2/Call Transcripts"), dictionary1, dictionary2, "\t", true, null, output);
         
-       // audit.close();
         output.close();
     }
     
@@ -397,7 +392,8 @@ public class Logic {
             String delimiter, 
             Writer output) throws IOException {
         // PRE HEADERS
-        output.write("Name" + delimiter +  "Year" + delimiter + "Quarter" + delimiter + "Date" + delimiter + "Pre_Total");
+        output.write("Name" + delimiter +  "Year" + delimiter + 
+                "Quarter" + delimiter + "Date" + delimiter + "Pre_Total");
         
         if (outputCounts) {
         
@@ -412,7 +408,8 @@ public class Logic {
         
         }
         
-        output.write(delimiter + "Post_Total" + delimiter + "Post_Company_Total" + delimiter + "Post_Analyst_Total");
+        output.write(delimiter + "Post_Total" + delimiter + 
+                "Post_Company_Total" + delimiter + "Post_Analyst_Total");
         
         if (outputCounts) {
         // POST COMPANY HEADERS
@@ -511,18 +508,17 @@ public class Logic {
                 
                 // add names if they show in PRE section...
                 line = line.replaceAll("<[^>]+>", "");
-                // only check if there are more UPPER case letters than
-                // lower case letters in the PRE section because lines
-                // are more likely to have ": " in them and NOT be part 
-                // of a name.
+                // check if there are more UPPER case letters than
+                // lower case letters-- if more UPPER assume a name
+                // else more testing...
                 if (line.contains(": ")) {
                     String[] pieces = line.split(": ");
                     if (pieces.length > 0 && 
                             (isMoreUpper(pieces[0]) || 
-                              (!hasContraction(pieces[0].trim()) &&
-                              pieces[0].trim().length() < 50)
+                              (!hasContraction(pieces[0].trim()) && pieces[0].trim().length() < 50)
                             )
-                        ) {
+                        ) 
+                    {
                         name = pieces[0];
                         // names may have (ph) or something like that
                         // remove all (..) content...
@@ -541,32 +537,29 @@ public class Logic {
                             classify = 3; // do nothing
                         }
                         else if (name.equals("")) {
-
                         }
                         else if (analysts.contains(name) || name.contains("ANALYST") || title.contains("ANALYST")) {
                             classify = 2;
                             if (!analysts.contains(name)) analysts.add(name);
-                            logger.fine(name + " pre classified as analyst - case 6");
+                            logger.log(
+                                    Level.FINE, 
+                                    "{0}:{1}:{2} pre classified as analyst - case 6", 
+                                    new Object[]{file_name, line_number, name});
                         }
-                        else if (companyReps.contains(name)) { //|| arrayContains(myNames.get(i), name)) {
-                            if (!companyReps.contains(name)) companyReps.add(name);
-                            classify = 1;
-                            logger.fine(name + " pre classified as company rep - case 7");
-                        }
-                        // The operator introduces analysts only in the Q&A section
-                        else if (classify == 0) {
-                        //    classify = 2;
-                        //    if (!analysts.contains(name)) analysts.add(name);
-                        //    logger.fine(name + "classified as analyst - case 8");
-                        }
-                        // If name is listed in company representative array add to
-                        // company statements
                         else {
                             if (!companyReps.contains(name)) companyReps.add(name);
                             classify = 1;
-                            logger.fine(name + " pre classified as company rep - case 10");
+                            logger.log(
+                                    Level.FINE, 
+                                    "{0}:{1}:{2} pre classified as company - case 7", 
+                                    new Object[]{file_name, line_number, name});
                         }
                         line = pieces.length > 1 ? pieces[1].trim(): "";
+                    } else if (pieces.length > 0 && pieces[0].trim().length() < 50 && pieces[0].trim().length() > 0) {
+                        logger.log(
+                                Level.INFO, 
+                                "{0}:{1}:NOT A PERSON:{2}", 
+                                new Object[]{file_name, line_number, pieces[0].trim()});
                     }
                 }
                 if (pre_speaker_started) {
@@ -575,8 +568,7 @@ public class Logic {
                 }
 			} else {
                 
-                // There is a problem where some lines have ":" in them
-                // especially <sync time="01:26:12"/>
+                // remove XML in line
                 line = line.replaceAll("<[^>]+>", "");
                 String[] pieces = line.split(": ");
                 if (line.contains(": ") && 
@@ -641,9 +633,12 @@ public class Logic {
                             lines.add(nameObj);
                             classify = 2;
                             if (!analysts.contains(name)) analysts.add(name);
-                            logger.fine(name + "classified as analyst - case 6");
+                            logger.log(
+                                    Level.FINE, 
+                                    "{0}:{1}:{2} classified as analyst - case 6", 
+                                    new Object[]{file_name, line_number, name});
                         }
-                        else if (companyReps.contains(name)) { //|| arrayContains(myNames.get(i), name)) {
+                        else if (companyReps.contains(name)) { 
                             Name nameObj = Name.generateName(
                                 line_number, 
                                 Name.TYPE_COMPANY_REP, 
@@ -652,7 +647,10 @@ public class Logic {
                             lines.add(nameObj);
                             if (!companyReps.contains(name)) companyReps.add(name);
                             classify = 1;
-                            logger.fine(name + "classified as company rep - case 7");
+                            logger.log(
+                                    Level.FINE,  
+                                    "{0}:{1}:{2} classified as company rep - case 7", 
+                                    new Object[]{file_name, line_number, name});
                         }
                         // The operator introduces analysts
                         else if (classify == 0) {
@@ -664,7 +662,10 @@ public class Logic {
                             lines.add(nameObj);
                             classify = 2;
                             if (!analysts.contains(name)) analysts.add(name);
-                            logger.fine(name + "classified as analyst - case 8");
+                            logger.log(
+                                    Level.FINE, 
+                                    "{0}:{1}:{2} classified as analyst - case 8", 
+                                    new Object[]{file_name, line_number, name});
                         }
                         // If name is listed in company representative array add to
                         // company statements
@@ -677,11 +678,20 @@ public class Logic {
                             lines.add(nameObj);
                             if (!companyReps.contains(name)) companyReps.add(name);
                             classify = 1;
-                            logger.fine(name + "classified as company rep - case 10");
+                            logger.log(
+                                    Level.FINE, 
+                                    "{0}:{1}:{2} classified as company rep - case 10", 
+                                    new Object[]{file_name, line_number, name});
                         }
                         
                     }
                 } else {
+                        if (pieces.length > 0 && pieces[0].trim().length() < 50 && pieces[0].trim().length() > 0) {
+                            logger.log(
+                                Level.INFO, 
+                                "{0}:{1}:NOT A PERSON:{2}", 
+                                new Object[]{file_name, line_number, pieces[0].trim()});
+                        }
                         if (classify == 0) {
                             Name nameObj = Name.generateName(
                                 line_number, 
@@ -708,15 +718,31 @@ public class Logic {
             }
         }
         
-        for (Name named: lines) {
-            if (named.getType() == Name.TYPE_COMPANY_REP) { 
-                List<Match> matches = dictionary1.countWords(named.getLine(), Dictionary.TYPE_POST_COMPANY, named.getNumber(), null);
-                dictionary2.countWords(named.getLine(), Dictionary.TYPE_POST_COMPANY, named.getNumber(), matches);
-            } else if (named.getType() == Name.TYPE_ANALYST) {
-                List<Match> matches = dictionary1.countWords(named.getLine(), Dictionary.TYPE_POST_ANALYST, named.getNumber(), null);
-                dictionary2.countWords(named.getLine(), Dictionary.TYPE_POST_ANALYST, named.getNumber(), matches);
+        lines.stream().forEach((named) -> {
+            if (Objects.equals(named.getType(), Name.TYPE_COMPANY_REP)) { 
+                List<Match> matches = dictionary1.countWords(
+                        named.getLine(), 
+                        Dictionary.TYPE_POST_COMPANY, 
+                        named.getNumber(), 
+                        null);
+                dictionary2.countWords(
+                        named.getLine(), 
+                        Dictionary.TYPE_POST_COMPANY, 
+                        named.getNumber(), 
+                        matches);
+            } else if (Objects.equals(named.getType(), Name.TYPE_ANALYST)) {
+                List<Match> matches = dictionary1.countWords(
+                        named.getLine(), 
+                        Dictionary.TYPE_POST_ANALYST, 
+                        named.getNumber(), 
+                        null);
+                dictionary2.countWords(
+                        named.getLine(), 
+                        Dictionary.TYPE_POST_ANALYST, 
+                        named.getNumber(), 
+                        matches);
             }
-        }
+        });
         
         // TRANSCRIPT VALUES
         output.write(company_name);
@@ -729,7 +755,7 @@ public class Logic {
         output.write( delimiter );
         
         // PRE VALUES
-        output.write(String.valueOf(dictionary1.preCountAllWords));// +":" + dictionary2.preCountAllWords);
+        output.write(String.valueOf(dictionary1.preCountAllWords));
         if (outputCounts) {
         for (String category: dictionary1.getCategories()) {
             output.write(delimiter);
@@ -747,11 +773,13 @@ public class Logic {
         }
         }
         output.write(delimiter);
-        output.write(String.valueOf(dictionary1.postCountAllCompanyWords + dictionary1.postCountAllAnalystWords));// + ":" + (dictionary2.postCountAllCompanyWords + dictionary2.postCountAllAnalystWords));
+        output.write(String.valueOf(
+                dictionary1.postCountAllCompanyWords + 
+                        dictionary1.postCountAllAnalystWords));
         output.write(delimiter);
-        output.write(String.valueOf(dictionary1.postCountAllCompanyWords));// +":" + dictionary2.postCountAllCompanyWords);
+        output.write(String.valueOf(dictionary1.postCountAllCompanyWords));
         output.write(delimiter);
-        output.write(String.valueOf(dictionary1.postCountAllAnalystWords));// +":" + dictionary2.postCountAllAnalystWords);
+        output.write(String.valueOf(dictionary1.postCountAllAnalystWords));
         
         // POST COMPANY VALUES
         if (outputCounts) {
@@ -823,17 +851,6 @@ public class Logic {
             dictionary1.audit.write("\n");
         }
         
-              
-//        audit.close();
-
-        //System.out.println("size: " + dictionary2.size());
-        //System.out.println("precountall:" + dictionary2.preCountAllWords);
-        //System.out.println("allwords:" + dictionary2.countAllWords);
-        //System.out.println("prealldictionary: " + dictionary2.preCountAllDictionaryWords);
-        
-        //System.out.println("postcountallan: " + dictionary2.postCountAllAnalystWords);
-        //System.out.println("postcountallco: " + dictionary2.postCountAllCompanyWords);
-        
     }
     
     public List<String> loadExclusionWords(File path) throws FileNotFoundException, IOException {
@@ -844,7 +861,7 @@ public class Logic {
             if (line.trim().length() > 0 && !list.contains(line.trim()))
                 list.add(line.trim());
         }
-        Logger.getGlobal().finest("Loaded exclusion " + list.size() + " words.");
+        Logger.getGlobal().log(Level.FINEST, "Loaded exclusion {0} words.", list.size());
         return list;
     }
     
@@ -920,7 +937,8 @@ public class Logic {
     
 	public static String[] splitAndMaskWordsAroundNot(String text) {
         String[] words = text.split("\\s+");
-        //ignore words around "not" (next to, or one word away) - G.H. (this can be much more efficient with a regex)
+        //ignore words around "not" (next to, or one word away) - 
+        //G.H. (this can be much more efficient with a regex)
         for (int i=0; i<words.length; i++) {
         	words[i] = stripEndingPunctuation(words[i]);
         	if (words[i].equalsIgnoreCase("not")) {
@@ -936,7 +954,8 @@ public class Logic {
 	
 	public static String[] splitAndMaskWordsAroundNotLeavePunctuation(String text) {
         String[] words = text.split("\\s+");
-        //ignore words around "not" (next to, or one word away) - G.H. (this can be much more efficient with a regex)
+        //ignore words around "not" (next to, or one word away) - 
+        //G.H. (this can be much more efficient with a regex)
         for (int i=0; i<words.length; i++) {
         	if (words[i].equalsIgnoreCase("not")) {
         		if (i - 2 > 0) words[i-2] = "NNNNN";

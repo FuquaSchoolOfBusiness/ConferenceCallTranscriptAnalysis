@@ -6,7 +6,6 @@
 package edu.duke.fuqua.conferencecalltranscriptanalysis;
 
 import java.awt.Color;
-import java.awt.Window;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -16,7 +15,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
-import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
 /**
@@ -403,86 +401,87 @@ public class MainFrame extends javax.swing.JFrame {
 
     private void runOutput(Boolean outputCounts, Boolean outputDistances) {
         
-SwingWorker worker = new SwingWorker<Void, Void>() {
-    @Override
-    public Void doInBackground() {
+        // We must process the work in a separate thread to update the UI.
+        SwingWorker worker = new SwingWorker<Void, Void>() {
+            @Override
+            public Void doInBackground() {
         
- Date started = new java.util.Date();
-        outputDisplay.setText("Started processing files at " + (started) + ".\n");
-        Logic logic = new Logic();
-        Dictionary dictionary1 = null;
-        Dictionary dictionary2 = null;
+                Date started = new java.util.Date();
+                outputDisplay.setText("Started processing files at " + (started) + ".\n");
+                Logic logic = new Logic();
+                Dictionary dictionary1 = null;
+                Dictionary dictionary2 = null;
                 
-        Writer output;
-        try {
+                Writer output;
+                try {
       
-            // Load dictionary 1
-            dictionary1 = logic.parseDictionaryFromFile(dictionary1File);
-            dictionary1.distanceBetweenWords = (Integer) wordDistanceSpinner.getValue();
-            if (exclusion1File != null && dictionary1 != null) 
-                try {
-                    dictionary1.exclusions = logic.loadExclusionWords(exclusion1File);
-                } catch (IOException ex) {
-                    Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                    // Load dictionary 1
+                    dictionary1 = logic.parseDictionaryFromFile(dictionary1File);
+                    dictionary1.distanceBetweenWords = (Integer) wordDistanceSpinner.getValue();
+                    if (exclusion1File != null && dictionary1 != null) 
+                        try {
+                            dictionary1.exclusions = logic.loadExclusionWords(exclusion1File);
+                        } catch (IOException ex) {
+                            Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+                        }
 
-            // Load dictionary 2
-            dictionary2 = logic.parseDictionaryFromFile(dictionary2File);
-            dictionary2.distanceBetweenWords = (Integer) wordDistanceSpinner.getValue();
-            if (exclusion2File != null && dictionary2 != null) 
-                try {
-                    dictionary2.exclusions = logic.loadExclusionWords(exclusion2File);
+                    // Load dictionary 2
+                    dictionary2 = logic.parseDictionaryFromFile(dictionary2File);
+                    dictionary2.distanceBetweenWords = (Integer) wordDistanceSpinner.getValue();
+                    if (exclusion2File != null && dictionary2 != null) 
+                        try {
+                            dictionary2.exclusions = logic.loadExclusionWords(exclusion2File);
+                        } catch (IOException ex) {
+                            Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+        
+                    File outfile = new File("data.txt");
+                    output = new FileWriter(outfile);
+            
+                    outputFileLocation.setText("Output file location: " + outfile.getAbsolutePath());
+            
+                    logic.writeHeader(
+                        outputCounts,
+                        outputDistances,
+                        dictionary1, 
+                        dictionary2, 
+                        commaSeparatedValuesButton.isSelected() ? ",": "\t",
+                        output);
+            
+                    logic.processFiles(
+                        outputCounts,
+                        outputDistances,
+                        transcriptLocationFile, 
+                        dictionary1, 
+                        dictionary2,
+                        commaSeparatedValuesButton.isSelected() ? ",": "\t",
+                        auditCheckbox.isSelected(),
+                        MainFrame.this,
+                        output);
+        
+                    output.close();
+            
+                    Date finished = new java.util.Date();
+            
+                    MainFrame.this.writeToOutput("Finished processing files at " + (finished) + ".\n");
+                    MainFrame.this.writeToOutput("Total processing time: " + (finished.getTime() - started.getTime()) + "ms\n");
+        
+                    JOptionPane.showMessageDialog(MainFrame.this, "Finished processing files.");
+        
                 } catch (IOException ex) {
                     Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
-                }
+            
+                    JOptionPane.showMessageDialog(MainFrame.this, "Error when processing files.", "Error", JOptionPane.ERROR_MESSAGE);
+                }         
         
-            File outfile = new File("data.txt");
-            output = new FileWriter(outfile);
-            
-            outputFileLocation.setText("Output file location: " + outfile.getAbsolutePath());
-            
-            logic.writeHeader(
-                    outputCounts,
-                    outputDistances,
-                    dictionary1, 
-                    dictionary2, 
-                    commaSeparatedValuesButton.isSelected() ? ",": "\t",
-                    output);
-            
-            logic.processFiles(
-                    outputCounts,
-                    outputDistances,
-                    transcriptLocationFile, 
-                    dictionary1, 
-                    dictionary2,
-                    commaSeparatedValuesButton.isSelected() ? ",": "\t",
-                    auditCheckbox.isSelected(),
-                    MainFrame.this,
-                    output);
-        
-            output.close();
-            
-            Date finished = new java.util.Date();
-            
-            MainFrame.this.writeToOutput("Finished processing files at " + (finished) + ".\n");
-            MainFrame.this.writeToOutput("Total processing time: " + (finished.getTime() - started.getTime()) + "ms\n");
-        
-            JOptionPane.showMessageDialog(MainFrame.this, "Finished processing files.");
-        
-        } catch (IOException ex) {
-            Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
-            
-            JOptionPane.showMessageDialog(MainFrame.this, "Error when processing files.", "Error", JOptionPane.ERROR_MESSAGE);
-        }         
-        
-        return null;
-    }
-};        
+                return null;
+            }
+        };        
         
         worker.execute();
         
-        
     }
+    
     private void runWordCountsButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_runWordCountsButtonActionPerformed
 
                 runOutput(true, false);

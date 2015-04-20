@@ -18,13 +18,19 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * A Dictionary is a list of words each with zero or more categories.
+ * A Dictionary is a list of words each with one category.
  * This is a special HashMap where the key is the word and the value
- is a List of Strings for each category.
- 
- Dictionary has a counting feature to process lines of text for words
- in the lexicon (including counts for each category).  This will 
- work for any arbitrary dictionary. 
+ * is a List of Strings for each category.
+ * 
+ * It is important that the better matches appear later in the list.
+ * The last match in the list is the one that is used.  The code tests
+ * the terms in reverse order (so performance-wise it will stop with 
+ * the first match which will be the last matching term listed in the
+ * dictionary file).
+ * 
+ * Dictionary has a counting feature to process lines of text for words
+ * in the lexicon (including counts for each category).  This will 
+ * work for any arbitrary dictionary. 
  * 
  * @author conder
  */
