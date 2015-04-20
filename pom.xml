@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>edu.duke.fuqua</groupId>
     <artifactId>ConferenceCallTranscriptAnalysis</artifactId>
-    <version>2.1</version>
+    <version>2.2-SNAPSHOT</version>
     <packaging>jar</packaging>
     
     <repositories>
@@ -29,7 +29,7 @@
         <connection>scm:git:ssh://git@source.fuqua.duke.edu:7999/ra/conferencecalltranscriptanalysis.git</connection>
         <url>scm:git:ssh://git@source.fuqua.duke.edu:7999/ra/conferencecalltranscriptanalysis.git</url>
         <developerConnection>scm:git:ssh://git@source.fuqua.duke.edu:7999/ra/conferencecalltranscriptanalysis.git</developerConnection>
-        <tag>ConferenceCallTranscriptAnalysis-2.1</tag>
+        <tag>HEAD</tag>
     </scm> 
     <dependencies>
         <dependency>
