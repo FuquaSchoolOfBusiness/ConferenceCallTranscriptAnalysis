@@ -49,10 +49,10 @@ public class Logic {
   PrintWriter companiesOutput;
       
 /**
- * Parse company name from file (name of file).
- * @param file
- * @return 
- */    
+ * 
+ * @param file File
+ * @return String
+ */
     public String parseCompanyNameFromFile(File file) {
         if (file.getName().endsWith("txt")) {
             String companyName = file.getPath().substring(
@@ -70,22 +70,12 @@ public class Logic {
     }
   
 /**
- * Parse names from transcript file.
- * Do not include any title that is not uppercase and do not
- * include any title with a digit. We only care about names 
- * before QUESTION AND ANSWER
- * Title must have a comma (name is first).
- * Replace non alpha characters at beginning and end of name
- * Ignore certain text
- * Name should have a whitespace " "
- * Name should have between 2-3 words
  * 
- * Use BufferedReader instead of Scanner since we are using the
- * whole line and the application may be multi-threaded.
- * 
- * @param f
- * @return 
- */    
+ * @param file
+ * @return
+ * @throws FileNotFoundException
+ * @throws IOException 
+ */
     public List parseNamesFromFile(File file) throws FileNotFoundException, IOException {
         ArrayList<String> companyReps = new ArrayList<String>();
         if (file.getName().endsWith("txt")) {		
@@ -114,7 +104,7 @@ public class Logic {
 /**
  * Parse name from line.
  * @param line
- * @return 
+ * @return String name from line
  */
     public String parseNameFromLine(String line) {
         // Do not include any line that is not uppercased
@@ -163,7 +153,12 @@ public class Logic {
         return null;
     }
     
-    // test method...
+/**
+ * 
+ * @param savePath
+ * @param filesPath
+ * @throws IOException 
+ */
     public void doFindNames(String savePath, String filesPath) throws IOException {  	
 		//Array for output
 		results = new TreeMap<>();
@@ -175,7 +170,9 @@ public class Logic {
 		synthesizeOutput();
     }
     
-    // dump output to file
+/**
+ * 
+ */
     public void synthesizeOutput() {
         for (String key: results.keySet()) {
             List<String> names = results.get(key);
@@ -213,16 +210,12 @@ public class Logic {
     }
     
 /**
- * Parse dictionary file.  Terms may have
- * categories associated with them.  The file should 
- * be formatted like:
- *  [TERM],[CATEGORY]
- * or
- *  [TERM]
- *
- * @param f
- * @return 
- */    
+ * 
+ * @param file
+ * @return
+ * @throws FileNotFoundException
+ * @throws IOException 
+ */  
     public Dictionary parseDictionaryFromFile(File file) throws FileNotFoundException, IOException {
         Dictionary lexicon = new Dictionary();
         int linenum = 0;
@@ -264,47 +257,9 @@ public class Logic {
     }
     
     /**
-     * 1. GET DICTIONARIES
-     * 2. PARSE FILE FOR NAMES
-     * 3. PARSE FILE FOR WORD COUNTS PRE/POST
      * 
-     * PRE COUNTS
-     * totalWordCountPre
-     * marketingWordCountPre
-     * categoryWordCountPre[]
-     * wordCountArray[] (word: count)
-     * 
-     * POST COUNTS
-     * totalWordCountCompanyPost
-     * totalWordCountAnalystPost
-     * marketingWordCountCompanyPost
-     * marketingWordCountAnalystPost
-     * categoryWordCountCompanyPost[]
-     * categoryWordCountAnalystPost[]
-     * wordCountArrayCompany[]
-     * wordCountArrayAnalyst[]
-     * 
+     * @throws IOException 
      */
-    
-    /**
-     * TESTS:
-     * 
-     * 1. Parsing names from file.
-     * 2. Parsing name from filename.
-     * 3. Parsing date info from top of file.
-     * 4. Counting all words.
-     * 5. Counting all pre-words.
-     * 6. Counting all dictionary words/categories.
-     * 7. Parsing analyst/company sections.
-     * 8. Counting all post words/categories.
-     * 9.
-     * 10. MEW words...
-     * 
-     * 11. Test EXCLUSIONS 
-     */
-    
-    
-    
     public void testLexiconPre() throws IOException {
         
         // Inputs:
@@ -342,6 +297,18 @@ public class Logic {
         output.close();
     }
     
+/**
+ * 
+ * @param outputCounts
+ * @param outputDistances
+ * @param directory
+ * @param dictionary1
+ * @param dictionary2
+ * @param delimiter
+ * @param audit
+ * @param mf
+ * @param output 
+ */    
     public void processFiles(
             Boolean outputCounts,
             Boolean outputDistances,
@@ -384,6 +351,16 @@ public class Logic {
         }
     }
        
+/**
+ * 
+ * @param outputCounts
+ * @param outputDistances
+ * @param dictionary1
+ * @param dictionary2
+ * @param delimiter
+ * @param output
+ * @throws IOException 
+ */
     public void writeHeader(
             Boolean outputCounts,
             Boolean outputDistances,
@@ -452,6 +429,17 @@ public class Logic {
         
     }
     
+/**
+ * 
+ * @param outputCounts
+ * @param outputDistances
+ * @param dictionary1
+ * @param dictionary2
+ * @param transcript
+ * @param delimiter
+ * @param output
+ * @throws IOException 
+ */
     public void processFile(
             Boolean outputCounts,
             Boolean outputDistances,
@@ -853,6 +841,13 @@ public class Logic {
         
     }
     
+    /**
+     * 
+     * @param path
+     * @return
+     * @throws FileNotFoundException
+     * @throws IOException 
+     */
     public List<String> loadExclusionWords(File path) throws FileNotFoundException, IOException {
         List<String> list = new ArrayList<>();
         BufferedReader br = new BufferedReader(new FileReader(path));
@@ -865,6 +860,11 @@ public class Logic {
         return list;
     }
     
+    /**
+     * 
+     * @param line
+     * @return 
+     */
     public String parseLineForDate(String line) {
         
 			String[] lineArray = line.split(" ");
@@ -911,11 +911,21 @@ public class Logic {
 			return null;
     }
     
+    /**
+     * 
+     * @param str
+     * @return 
+     */
     public static boolean isNumeric(String str)
     {
       return str.matches("-?\\d+(\\.\\d+)?");
     }
     
+    /**
+     * 
+     * @param str
+     * @return 
+     */
 	public static boolean isMonth(String str) {
 		str = str.toLowerCase();
 		if (str.contains("january") | str.contains("february")
@@ -935,6 +945,11 @@ public class Logic {
 		}
 	}    
     
+    /**
+     * 
+     * @param text
+     * @return 
+     */
 	public static String[] splitAndMaskWordsAroundNot(String text) {
         String[] words = text.split("\\s+");
         //ignore words around "not" (next to, or one word away) - 
@@ -952,6 +967,11 @@ public class Logic {
 		return words;
 	}
 	
+    /**
+     * 
+     * @param text
+     * @return 
+     */
 	public static String[] splitAndMaskWordsAroundNotLeavePunctuation(String text) {
         String[] words = text.split("\\s+");
         //ignore words around "not" (next to, or one word away) - 
@@ -968,6 +988,13 @@ public class Logic {
 		return words;
 	}
 
+    /**
+     * 
+     * @param word1
+     * @param word2
+     * @param line
+     * @return 
+     */
     public static boolean sameSentence(Integer word1, Integer word2, String line) {
         String[] words = splitAndMaskWordsAroundNotLeavePunctuation(line);
         Integer start = word1 < word2 ? word1: word2;
@@ -984,16 +1011,32 @@ public class Logic {
         return true;
     }
     
+    /**
+     * 
+     * @param str
+     * @return 
+     */
 	public static String stripEndingPunctuation(String str) {
 		str = str.replaceFirst("^[^a-zA-Z]+", "");
 		str = str.replaceAll("[^a-zA-Z]+$", "");
 		return str;
 	}
 
+    /**
+     * 
+     * @param s
+     * @return 
+     */
     public static Boolean isPhrase(String s) {
         return s.contains(" ");
     }
     
+    /**
+     * 
+     * @param word
+     * @param pertinentExcludedWords
+     * @return 
+     */
 	public static boolean isExcludedWord(String word, List<String> pertinentExcludedWords) {
 		for (String EWord : pertinentExcludedWords) {
 			if (word.startsWith(EWord.toLowerCase())) {
@@ -1003,6 +1046,11 @@ public class Logic {
 		return false;
 	}
     
+    /**
+     * 
+     * @param string
+     * @return 
+     */
     public Boolean hasContraction(String string) {
         
         if (string.toLowerCase().contains(" and ") || 
@@ -1034,6 +1082,12 @@ public class Logic {
             return false;
         
     }
+    
+    /**
+     * 
+     * @param string
+     * @return 
+     */
     public Boolean isMoreUpper(String string) {
         Integer upper = 0;
         Integer lower = 0;
